@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Audit Web</title>
+<script>
+async function sendAudit() {
+    const website = document.getElementById("website").value;
+    const location = document.getElementById("location").value;
+
+    const response = await fetch("/api/audit", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ website, location })
+    });
+
+    if (!response.ok) {
+        alert("Erreur lors de l'audit");
+        return;
+    }
+
+    const data = await response.json();
+
+    // Afficher les résultats dans la page
+    document.getElementById("result").innerHTML = `
+        <h2>Résultat de l'audit pour ${data.website}</h2>
+        <p>Score : ${data.score}/100</p>
+        <h3>Forces :</h3><ul>${data.strengths.map(s => `<li>${s}</li>`).join('')}</ul>
+        <h3>Faiblesses :</h3><ul>${data.weaknesses.map(w => `<li>${w}</li>`).join('')}</ul>
+        <button id="downloadPdfBtn">Télécharger le rapport PDF</button>
+    `;
+
+    // Stocker les données pour export PDF
+    window.auditData = data;
+
+    // Attacher l'événement au bouton
+    document.getElementById("downloadPdfBtn").addEventListener("click", downloadPdf);
+}
+
+async function downloadPdf() {
+    if (!window.auditData) {
+        alert("Faites d'abord l'audit !");
+        return;
+    }
+
+    const response = await fetch("/export-pdf", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(window.auditData)
+    });
+
+    if (!response.ok) {
+        alert("Erreur lors de la génération du PDF");
+        return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+
+    // Génère un nom de fichier simple basé sur le site web
+    const filename = `audit_${window.auditData.website.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+}
+</script>
+</head>
+<body>
+<h1>API d'Audit Web</h1>
+<form onsubmit="event.preventDefault(); sendAudit();">
+    <label for="website">Site web :</label>
+    <input type="url" id="website" required placeholder="https://www.example.com" />
+    <br/>
+    <label for="location">Localisation :</label>
+    <input type="text" id="location" required placeholder="Paris" />
+    <br/>
+    <button type="submit">Lancer l'audit</button>
+</form>
+
+<div id="result"></div>
+</body>
+</html>
