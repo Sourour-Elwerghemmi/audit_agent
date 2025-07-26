@@ -44,6 +44,8 @@ class AuditOut(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     recommandations: dict
+    strengths: List[DetailItem] = []
+    weaknesses: List[DetailItem] = []
 
     class Config:
         orm_mode = True
@@ -116,12 +118,11 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[int] = None
 
-# ✅ Nouveau modèle pour la mise à jour du profil
 class UpdateProfile(BaseModel):
     nom: Optional[str] = None
     prenom: Optional[str] = None
     email: Optional[EmailStr] = None
-    current_password: str  # Toujours requis pour valider l'identité
+    current_password: str  
     new_password: Optional[str] = None
     
     @validator('new_password')
@@ -133,10 +134,9 @@ class UpdateProfile(BaseModel):
     @validator('nom', 'prenom')
     def validate_names(cls, v):
         if v is not None and len(v.strip()) == 0:
-            return None  # Convertir les chaînes vides en None
+            return None 
         return v.strip() if v else v
 
-# ✅ Modèle de réponse pour le profil utilisateur
 class UserProfile(BaseModel):
     id: int
     email: EmailStr

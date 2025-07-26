@@ -40,6 +40,9 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
       const data = await response.json();
       const accessToken = data.access_token;
 
+      // Stocker le token dans localStorage
+      localStorage.setItem("accessToken", accessToken);
+
       // On appelle onLogin avec email, nom extrait de l’email, et le token JWT
       onLogin({ email, name: email.split('@')[0], token: accessToken });
 

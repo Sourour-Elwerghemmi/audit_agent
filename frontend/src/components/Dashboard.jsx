@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSettings }) {
+export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSettings, onViewAuditDetails }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [audits, setAudits] = useState([]);
@@ -181,7 +181,10 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <button className="text-orange-600 hover:text-orange-800 font-medium px-3 py-1.5 rounded-md hover:bg-orange-50 transition-colors">
+                      <button 
+                        onClick={() => onViewAuditDetails(audit)}
+                        className="text-orange-600 hover:text-orange-800 font-medium px-3 py-1.5 rounded-md hover:bg-orange-50 transition-colors"
+                      >
                         Voir détails
                       </button>
                     </td>

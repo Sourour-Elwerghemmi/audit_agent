@@ -1,3 +1,5 @@
+# routes.py (version complète corrigée)
+
 import logging
 import os
 from pathlib import Path
@@ -5,7 +7,6 @@ import traceback
 from typing import Optional
 import uuid
 from app.models_db import Audit, BusinessInfo
-
 from app.models_db import User as DBUser
 
 from fastapi import APIRouter, HTTPException, Depends, Query, status
@@ -45,7 +46,6 @@ router = APIRouter(
     tags=["audit"],
     responses={404: {"description": "Non trouvé"}}
 )
-
 logger = logging.getLogger(__name__)
 
 
@@ -72,6 +72,35 @@ def to_action_items(lst, priority="medium"):
             p = item.get("priority") or priority
             result.append({"title": title, "description": description, "priority": p})
     return result
+
+
+def get_audit_with_details(db: Session, audit_id: int):
+    audit = db.query(Audit).filter(Audit.id == audit_id).first()
+    if not audit:
+        return None
+
+    return {
+        "id": audit.id,
+        "api_key": audit.api_key,
+        "name": audit.name,
+        "location": audit.location,
+        "score": audit.score,
+        "strengths": audit.strengths or [],
+        "weaknesses": audit.weaknesses or [],
+        "recommendations": audit.recommandations or {},
+        "created_at": audit.created_at,
+        "updated_at": audit.updated_at,
+        "business_info": {
+            "name": audit.business_info.name if audit.business_info else None,
+            "address": audit.business_info.address if audit.business_info else None,
+            "website": audit.business_info.website if audit.business_info else None,
+            "phone": audit.business_info.phone if audit.business_info else None,
+            "rating": audit.business_info.rating if audit.business_info else None,
+            "review_count": audit.business_info.review_count if audit.business_info else None,
+            "photos": audit.business_info.photos if audit.business_info else None
+        } if audit.business_info else None,
+        "user_id": audit.user_id
+    }
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -107,7 +136,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
-    access_token_expires = timedelta(minutes=1440) 
+    access_token_expires = timedelta(minutes=1440)
     access_token = create_access_token(
         data={"sub": user.email},
         expires_delta=access_token_expires
@@ -126,52 +155,45 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.put("/user/profile", response_model=UserProfile)
-def update_profile(
-    profile_data: UpdateProfile,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    ✅ Mise à jour du profil utilisateur avec validation complète
-    """
+def update_profile(update_data: UpdateProfile, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         logger.info(f"Début mise à jour profil pour utilisateur ID: {current_user.id}")
-        logger.info(f"Données reçues: nom={profile_data.nom}, prenom={profile_data.prenom}, email={profile_data.email}")
-        
-        if not verify_password(profile_data.current_password, current_user.hashed_password):
+        logger.info(f"Données reçues: nom={update_data.nom}, prenom={update_data.prenom}, email={update_data.email}")
+
+        if not verify_password(update_data.current_password, current_user.hashed_password):
             logger.warning("Mot de passe actuel incorrect")
             raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect")
-        
-        if profile_data.email and profile_data.email != current_user.email:
+
+        if update_data.email and update_data.email != current_user.email:
             existing_user = db.query(User).filter(
-                User.email == profile_data.email,
+                User.email == update_data.email,
                 User.id != current_user.id
             ).first()
             if existing_user:
-                logger.warning(f"Email {profile_data.email} déjà utilisé par un autre utilisateur")
+                logger.warning(f"Email {update_data.email} déjà utilisé par un autre utilisateur")
                 raise HTTPException(status_code=400, detail="Cette adresse email est déjà utilisée")
-        
-        if profile_data.nom is not None:
-            current_user.nom = profile_data.nom
-            logger.info(f"Nom mis à jour: {profile_data.nom}")
-        
-        if profile_data.prenom is not None:
-            current_user.prenom = profile_data.prenom
-            logger.info(f"Prénom mis à jour: {profile_data.prenom}")
-        
-        if profile_data.email and profile_data.email != current_user.email:
-            current_user.email = profile_data.email
-            logger.info(f"Email mis à jour: {profile_data.email}")
-        
-        if profile_data.new_password:
-            current_user.hashed_password = get_password_hash(profile_data.new_password)
+
+        if update_data.nom is not None:
+            current_user.nom = update_data.nom
+            logger.info(f"Nom mis à jour: {update_data.nom}")
+
+        if update_data.prenom is not None:
+            current_user.prenom = update_data.prenom
+            logger.info(f"Prénom mis à jour: {update_data.prenom}")
+
+        if update_data.email and update_data.email != current_user.email:
+            current_user.email = update_data.email
+            logger.info(f"Email mis à jour: {update_data.email}")
+
+        if update_data.new_password:
+            current_user.hashed_password = get_password_hash(update_data.new_password)
             logger.info("Mot de passe mis à jour")
-        
+
         db.commit()
         db.refresh(current_user)
-        
+
         logger.info("Profil mis à jour avec succès")
-        
+
         return UserProfile(
             id=current_user.id,
             email=current_user.email,
@@ -188,11 +210,9 @@ def update_profile(
         db.rollback()
         raise HTTPException(status_code=500, detail="Erreur interne lors de la mise à jour")
 
+
 @router.get("/user/profile", response_model=UserProfile)
 def get_profile(current_user: User = Depends(get_current_user)):
-    """
-    ✅ Récupération du profil utilisateur
-    """
     return UserProfile(
         id=current_user.id,
         email=current_user.email,
@@ -247,6 +267,8 @@ async def audit_business(
             location=request.location,
             score=analysis.get("score", 0),
             recommandations=action_plan,
+            strengths=strengths,
+            weaknesses=weaknesses,
             user_id=current_user.id if current_user else None,
             api_key=api_key
         )
@@ -320,7 +342,6 @@ async def get_user_audits(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    print(f"✅ Utilisateur connecté ID: {current_user.id}")
     try:
         audits_query = (
             db.query(Audit)
@@ -333,23 +354,25 @@ async def get_user_audits(
 
         audit_list = []
         for audit in audits:
-            audit_out = AuditOut(
-                id=audit.id,
-                name=audit.name,
-                location=audit.location or "Non spécifiée",
-                score=audit.score or 0,
-                created_at=audit.created_at,
-                updated_at=audit.updated_at,
-                recommandations=audit.recommandations or {}
-            )
+            audit_out = {
+                "id": audit.id,
+                "name": audit.name,
+                "location": audit.location or "Non spécifiée",
+                "score": audit.score or 0,
+                "created_at": audit.created_at,
+                "updated_at": audit.updated_at,
+                "recommandations": audit.recommandations or {},
+                "strengths": audit.strengths or [],
+                "weaknesses": audit.weaknesses or []
+            }
             audit_list.append(audit_out)
 
-        return AuditListResponse(
-            audits=audit_list,
-            total=total,
-            page=(skip // limit) + 1,
-            per_page=limit
-        )
+        return {
+            "audits": audit_list,
+            "total": total,
+            "page": (skip // limit) + 1,
+            "per_page": limit
+        }
 
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des audits: {e}")
@@ -358,35 +381,36 @@ async def get_user_audits(
 
 @router.get("/audit/{audit_id}", response_model=StoredAudit)
 async def get_audit(audit_id: int, db: Session = Depends(get_db)):
-    audit = get_audit_by_id(db, audit_id)
+    audit = get_audit_with_details(db, audit_id)
     if not audit:
         raise HTTPException(status_code=404, detail="Audit non trouvé")
-    return audit_to_dict(audit)
+    return audit
 
 
 @router.get("/audit/api/{api_key}", response_model=StoredAudit)
 async def get_audit_by_key(api_key: str, db: Session = Depends(get_db)):
-    audit = get_audit_by_api_key(db, api_key)
+    audit = db.query(Audit).filter(Audit.api_key == api_key).first()
     if not audit:
         raise HTTPException(status_code=404, detail="Audit non trouvé")
-    return audit_to_dict(audit)
+    return get_audit_with_details(db, audit.id)
 
 
 @router.delete("/audit/{audit_id}")
 async def delete_audit_endpoint(audit_id: int, db: Session = Depends(get_db)):
-    success = delete_audit(db, audit_id)
-    if not success:
+    audit = db.query(Audit).filter(Audit.id == audit_id).first()
+    if not audit:
         raise HTTPException(status_code=404, detail="Audit non trouvé")
+    db.delete(audit)
+    db.commit()
     return {"message": "Audit supprimé avec succès"}
 
 
 @router.get("/audit/{audit_id}/recommendations")
 async def get_audit_recommendations(audit_id: int, db: Session = Depends(get_db)):
-    audit = get_audit_by_id(db, audit_id)
+    audit = get_audit_with_details(db, audit_id)
     if not audit:
         raise HTTPException(status_code=404, detail="Audit non trouvé")
-    recommendations = get_recommendations_structured(audit)
-    return recommendations
+    return audit.get("recommendations", {})
 
 
 @router.get("/export-pdf/{filename}")

@@ -11,10 +11,10 @@ def generate_api_key(length: int = 32) -> str:
     return ''.join(secrets.choice(characters) for _ in range(length))
 
 def save_audit_to_db(db: Session, name: str, location: str, score: int, 
-                    strengths: List[Dict[str, str]], weaknesses: List[Dict[str, str]], 
-                    recommendations: Dict[str, List[Dict[str, str]]],
-                    business_data: Optional[Dict[str, Any]] = None,
-                    user_id: Optional[int] = None) -> Audit:
+                     strengths: List[Dict[str, str]], weaknesses: List[Dict[str, str]], 
+                     recommendations: Dict[str, List[Dict[str, str]]],
+                     business_data: Optional[Dict[str, Any]] = None,
+                     user_id: Optional[int] = None) -> Audit:
     """
     Sauvegarde un audit complet en base de données
     
@@ -53,8 +53,8 @@ def save_audit_to_db(db: Session, name: str, location: str, score: int,
         score=score,
         strengths=strengths_json,
         weaknesses=weaknesses_json,
-        recommendations=recommendations_json,
-        user_id=user_id  # <-- AJOUT de user_id ici
+        recommandations=recommendations_json,
+        user_id=user_id
     )
     
     db.add(new_audit)
@@ -153,7 +153,7 @@ def audit_to_dict(audit: Audit) -> Dict[str, Any]:
     except (json.JSONDecodeError, TypeError):
         weaknesses = []
     try:
-        recommendations = json.loads(audit.recommendations) if audit.recommendations else {}
+        recommendations = json.loads(audit.recommandations) if audit.recommandations else {}
     except (json.JSONDecodeError, TypeError):
         recommendations = {}
 
@@ -188,11 +188,10 @@ def audit_to_dict(audit: Audit) -> Dict[str, Any]:
     return result
 
 def get_recommendations_structured(audit: Audit) -> Dict[str, List[Dict[str, str]]]:
-    
     """
     Récupère les recommandations sous forme structurée
     """
-    if not audit.recommendations:
+    if not audit.recommandations:
         return {
             'short_term': [],
             'mid_term': [],
@@ -200,10 +199,10 @@ def get_recommendations_structured(audit: Audit) -> Dict[str, List[Dict[str, str
         }
     
     try:
-        if isinstance(audit.recommendations, dict):
-            return audit.recommendations
+        if isinstance(audit.recommandations, dict):
+            return audit.recommandations
         else:
-            return json.loads(audit.recommendations)
+            return json.loads(audit.recommandations)
     except (json.JSONDecodeError, TypeError):
         return {
             'short_term': [],

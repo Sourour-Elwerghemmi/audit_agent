@@ -228,7 +228,6 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
             color: '#6b7280',
             cursor: 'pointer',
             marginBottom: '12px',
-            textDecoration: 'underline',
           }}
         >
           ← Retour à l'accueil
@@ -243,7 +242,6 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
               color: '#ff6b00',
               cursor: 'pointer',
               fontWeight: '600',
-              textDecoration: 'underline',
             }}
           >
             Se connecter

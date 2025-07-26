@@ -31,7 +31,6 @@ export default function LandingPage({ onStartAudit, onLogin, onRegister }) {
               <span className="text-2xl font-bold text-gray-900">Agent Local AI</span>
             </div>
             
-            {/* Navigation avec boutons Login/Register */}
             <div className="flex items-center space-x-4">
               <nav className="hidden md:flex space-x-8 mr-4">
                 <a href="#contact" className="text-gray-500 hover:text-gray-900 transition-colors">Contact</a>
@@ -39,19 +38,18 @@ export default function LandingPage({ onStartAudit, onLogin, onRegister }) {
                 <a href="#privacy" className="text-gray-500 hover:text-gray-900 transition-colors">Politique de confidentialité</a>
               </nav>
               
-              {/* Boutons d'authentification */}
               <div className="flex items-center space-x-3">
                 <button
                   onClick={onLogin}
                   className="px-4 py-2 text-gray-700 hover:text-orange-500 font-medium transition-colors border border-gray-300 rounded-md hover:border-orange-500"
                 >
-                  Login
+                  Se connecter 
                 </button>
                 <button
                   onClick={onRegister}
                   className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-md transition-colors shadow-sm"
                 >
-                  Register
+                  Créer un compte 
                 </button>
               </div>
             </div>
@@ -83,6 +81,7 @@ export default function LandingPage({ onStartAudit, onLogin, onRegister }) {
               </p>
             </div>
 
+            {/* BOUTON PRINCIPAL - déclenche onStartAudit */}
             <button
               onClick={onStartAudit}
               className="group bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
@@ -91,6 +90,7 @@ export default function LandingPage({ onStartAudit, onLogin, onRegister }) {
               <span>DÉMARRER L'AUDIT</span>
             </button>
           </div>
+          
           {/* Right Content - Map placeholder */}
           <div className="relative">
             <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -111,6 +111,7 @@ export default function LandingPage({ onStartAudit, onLogin, onRegister }) {
             </div>
           </div>
         </div>
+        
         {/* Features Section */}
         <div className="mt-24">
           <div className="grid md:grid-cols-3 gap-8">
@@ -132,6 +133,7 @@ export default function LandingPage({ onStartAudit, onLogin, onRegister }) {
           </div>
         </div>
       </main>
+      
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -1,27 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ConfirmationPage from './ConfirmationPage';
 
 export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nom, setNom] = useState(user?.nom || '');
+  const [prenom, setPrenom] = useState(user?.prenom || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      const nom = user.nom || '';
-      const prenom = user.prenom || '';
-      const fullNameValue = `${prenom} ${nom}`.trim();
-      
-      setFullName(fullNameValue);
-      setEmail(user.email || '');
-    }
-  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,61 +35,62 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
 
     setIsLoading(true);
     try {
-      const nameParts = fullName.trim().split(' ');
-      const prenom = nameParts[0] || '';
-      const nom = nameParts.slice(1).join(' ') || '';
-
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setErrorMsg("Session expirée, veuillez vous reconnecter");
-        setIsLoading(false);
-        return;
-      }
-
       const updateData = {
-        nom: nom,
-        prenom: prenom,
-        email: email,
-        current_password: currentPassword
+        current_password: currentPassword,
+        nom: nom.trim() || null,
+        prenom: prenom.trim() || null,
+        email: email.trim(),
       };
 
       if (newPassword) {
         updateData.new_password = newPassword;
       }
 
+      console.log('Données envoyées:', updateData);
+
+      // Récupération dynamique du token depuis localStorage
+      const authToken = localStorage.getItem('accessToken');
+
+      if (!authToken) {
+        setErrorMsg("Session expirée, veuillez vous reconnecter");
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify(updateData)
       });
+
+      if (response.status === 401) {
+        setErrorMsg("Session expirée, veuillez vous reconnecter");
+        setIsLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Erreur lors de la mise à jour');
       }
 
-      const data = await response.json();
-      
+      const updatedUser = await response.json();
+
       setSuccessMsg("Profil mis à jour avec succès !");
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
 
       if (onUpdateSuccess) {
-        onUpdateSuccess({
-          email: data.email,
-          nom: data.nom,
-          prenom: data.prenom,
-          name: `${data.prenom || ''} ${data.nom || ''}`.trim()
-        });
-      } else {
-        setTimeout(() => {
-          setShowConfirmation(true);
-        }, 1500);
+        onUpdateSuccess(updatedUser);
       }
+
+      setTimeout(() => {
+        setShowConfirmation(true);
+      }, 1500);
 
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
@@ -117,91 +108,103 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <h2 style={styles.title}>⚙️ Paramètres du profil</h2>
+          <h2 style={styles.title}>⚙️ Modifier le profil</h2>
           <button onClick={onBack} style={styles.backBtn} disabled={isLoading}>
             ⬅ Retour
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <section style={styles.section}>
-            <h3 style={styles.sectionTitle}>👤 Informations personnelles</h3>
+        <div style={styles.form}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Prénom</label>
+            <input
+              type="text"
+              value={prenom}
+              onChange={(e) => setPrenom(e.target.value)}
+              placeholder="Votre prénom"
+              style={styles.input}
+              disabled={isLoading}
+            />
+          </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Nom complet</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Prénom Nom"
-                style={styles.input}
-                disabled={isLoading}
-                required
-              />
-            </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Nom</label>
+            <input
+              type="text"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+              placeholder="Votre nom"
+              style={styles.input}
+              disabled={isLoading}
+            />
+          </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Adresse e-mail</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Votre adresse e-mail"
-                style={styles.input}
-                disabled={isLoading}
-                required
-              />
-            </div>
-          </section>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Votre email"
+              style={styles.input}
+              disabled={isLoading}
+              required
+            />
+          </div>
 
-          <section style={styles.section}>
-            <h3 style={styles.sectionTitle}>🔒 Modifier le mot de passe</h3>
+          <div style={styles.separator}>
+            <h3 style={styles.sectionTitle}>🔒 Modification du mot de passe</h3>
+            <p style={styles.sectionDesc}>Laissez vide si vous ne souhaitez pas changer de mot de passe</p>
+          </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Mot de passe actuel *</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Mot de passe actuel"
-                style={styles.input}
-                disabled={isLoading}
-                required
-              />
-            </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Mot de passe actuel *</label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Mot de passe actuel"
+              style={styles.input}
+              disabled={isLoading}
+              required
+            />
+          </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Nouveau mot de passe (optionnel)</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Nouveau mot de passe (laisser vide si inchangé)"
-                style={styles.input}
-                disabled={isLoading}
-              />
-            </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Nouveau mot de passe</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Nouveau mot de passe (optionnel)"
+              style={styles.input}
+              disabled={isLoading}
+            />
+          </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Confirmer le nouveau mot de passe</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirmer le mot de passe"
-                style={styles.input}
-                disabled={isLoading || !newPassword}
-              />
-            </div>
-          </section>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Confirmer le nouveau mot de passe</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirmer le mot de passe"
+              style={styles.input}
+              disabled={isLoading}
+            />
+          </div>
 
           {errorMsg && <div style={styles.errorMsg}>❌ {errorMsg}</div>}
           {successMsg && <div style={styles.successMsg}>✅ {successMsg}</div>}
 
-          <button type="submit" style={styles.submitBtn} disabled={isLoading}>
+          <button 
+            onClick={handleSubmit} 
+            style={styles.submitBtn} 
+            disabled={isLoading}
+          >
             {isLoading ? "Enregistrement..." : "Enregistrer les modifications"}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -249,19 +252,7 @@ const styles = {
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
-  },
-  section: {
-    backgroundColor: '#f8fafc',
-    borderRadius: '12px',
-    padding: '24px',
-    border: '1px solid #e2e8f0',
-  },
-  sectionTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: '16px',
+    gap: '20px',
   },
   inputGroup: {
     marginBottom: '16px',
@@ -282,6 +273,24 @@ const styles = {
     backgroundColor: '#ffffff',
     outline: 'none',
     transition: 'border-color 0.2s',
+  },
+  separator: {
+    marginTop: '20px',
+    marginBottom: '10px',
+    paddingTop: '20px',
+    borderTop: '1px solid #e2e8f0',
+  },
+  sectionTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#1e293b',
+    margin: '0 0 8px 0',
+  },
+  sectionDesc: {
+    fontSize: '14px',
+    color: '#64748b',
+    margin: 0,
+    fontStyle: 'italic',
   },
   errorMsg: {
     padding: '12px',
@@ -309,5 +318,6 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'background 0.2s',
+    marginTop: '10px',
   },
 };

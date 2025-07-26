@@ -1,3 +1,4 @@
+# models_db.py
 from sqlalchemy import Column, Integer, String, Text, Float, DateTime, JSON, ForeignKey, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -28,7 +29,6 @@ class User(Base):
     hashed_password = Column(String)
     nom = Column(String)
     prenom = Column(String)
-    # Ajout des champs manquants pour la compatibilité avec models.py
     statut_compte = Column(Enum(AccountStatus), default=AccountStatus.actif)
     plan_abonnement = Column(Enum(SubscriptionPlan), default=SubscriptionPlan.gratuit)
     limite_audits = Column(Integer, default=10)
@@ -47,13 +47,13 @@ class Audit(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, onupdate=datetime.utcnow)
     recommandations = Column(JSON)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Peut être NULL si audit anonyme
-    api_key = Column(String, nullable=True)  # Clé unique pour l'audit
+    strengths = Column(JSON, nullable=True)
+    weaknesses = Column(JSON, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    api_key = Column(String, nullable=True)
 
     user = relationship("User", back_populates="audits")
     business_info = relationship("BusinessInfo", back_populates="audit", uselist=False)
-    strengths = relationship("Strength", back_populates="audit")
-    weaknesses = relationship("Weakness", back_populates="audit")
 
 class BusinessInfo(Base):
     __tablename__ = "business_info"
@@ -74,24 +74,6 @@ class BusinessInfo(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     audit = relationship("Audit", back_populates="business_info")
-
-class Strength(Base):
-    __tablename__ = "strengths"
-
-    id = Column(Integer, primary_key=True, index=True)
-    audit_id = Column(Integer, ForeignKey("audits.id"))
-    content = Column(Text)
-
-    audit = relationship("Audit", back_populates="strengths")
-
-class Weakness(Base):
-    __tablename__ = "weaknesses"
-
-    id = Column(Integer, primary_key=True, index=True)
-    audit_id = Column(Integer, ForeignKey("audits.id"))
-    content = Column(Text)
-
-    audit = relationship("Audit", back_populates="weaknesses")
 
 class Session(Base):
     __tablename__ = "sessions"
