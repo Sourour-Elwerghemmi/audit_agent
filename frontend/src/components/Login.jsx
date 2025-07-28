@@ -72,7 +72,7 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
         
         {/* Header moderne */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
             <div style={{
               width: '32px',
               height: '32px',
@@ -81,12 +81,12 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginRight: '8px'
+              marginBottom: '8px'
             }}>
               <MapPin style={{ width: '20px', height: '20px', color: 'white' }} />
             </div>
             <span style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-              Agent Local AI
+              Connexion 
             </span>
           </div>
         </div>

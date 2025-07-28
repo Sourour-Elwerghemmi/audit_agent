@@ -80,26 +80,26 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
     }}>
       {/* Logo */}
       <div style={{
-        width: '60px',
-        height: '60px',
+        width: '28px',
+        height: '28px',
         backgroundColor: '#ff6b00',
-        borderRadius: '12px',
+        borderRadius: '8px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         margin: '0 auto 20px auto'
       }}>
-        <svg style={{ width: '30px', height: '30px', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg style={{ width: '18px', height: '18px', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
         </svg>
       </div>
 
       <h2 style={{
         textAlign: 'center',
-        fontSize: '28px',
-        fontWeight: '700',
+        fontSize: '20px',
+        fontWeight: '600',
         marginBottom: '30px',
-        color: '#1f2937',
+        color: '#111827',
       }}>
         Inscription
       </h2>
@@ -236,7 +236,7 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
         </button>
       </div>
 
-      <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '14px', color: '#4b5563' }}>
+      <div style={{ marginTop: '30px', textAlign: 'center', color: '#6b7280' }}>
         <button
           onClick={onBackToLanding}
           style={{
@@ -249,16 +249,18 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
         >
           ← Retour à l'accueil
         </button>
-        <p>
+        <p style={{ fontSize: '14px' }}>
           Vous avez déjà un compte ?{' '}
           <button
             onClick={onSwitchToLogin}
             style={{
+              color: '#FF6B00',
               background: 'none',
               border: 'none',
-              color: '#ff6b00',
               cursor: 'pointer',
               fontWeight: '600',
+              padding: 0,
+              margin: 0,
             }}
           >
             Se connecter
