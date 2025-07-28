@@ -30,7 +30,6 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
         setAudits([]);
         return;
       }
-
       if (!response.ok) {
         throw new Error(`Erreur lors de la récupération des audits: ${response.status}`);
       }
@@ -45,7 +44,6 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (user) {
       fetchAudits();
@@ -73,7 +71,6 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
     (currentPage - 1) * auditsPerPage,
     currentPage * auditsPerPage
   );
-
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
@@ -119,7 +116,6 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
             className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
           />
         </div>
-
         <div className="w-8 h-1 bg-orange-500 mb-8"></div>
 
         {error && (

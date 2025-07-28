@@ -74,10 +74,10 @@ export default function LandingPage({ onStartAudit, onLogin, onRegister }) {
 
             <div className="space-y-4">
               <p className="text-xl text-gray-600 leading-relaxed">
-                Analyse intelligente de votre fiche Google Business.
+                Analyse intelligente de votre fiche Google Business
               </p>
               <p className="text-xl text-gray-600 leading-relaxed">
-                Un plan d'action clair, sans fioritures.
+                Un plan d'action clair 
               </p>
             </div>
 

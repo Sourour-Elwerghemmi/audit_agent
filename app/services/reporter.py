@@ -77,80 +77,98 @@ def generate_action_plan(analysis: Dict) -> Dict:
         logger.error("Génération plan d'action échouée : %s", e, exc_info=True)
         return {"short_term": [], "mid_term": [], "long_term": []}
 
-# --- Partie génération PDF intégrée ---
-
 class AuditPDF(FPDF):
     def header(self):
-        self.set_font("Arial", "B", 16)
-        self.set_text_color(255, 140, 0)  # Orange
-        self.cell(0, 15, "Rapport d'Audit de Visibilité Locale", border=False, ln=True, align="C")
+        self.set_fill_color(255, 140, 0)  # orange vif
+        self.rect(0, 0, self.w, 20, "F")
+
+        self.set_font("Arial", "B", 18)
+        self.set_text_color(255, 255, 255)  # blanc
+        self.cell(0, 20, "Rapport d'Audit de Visibilité Locale", border=0, ln=True, align="C")
         self.ln(5)
 
-    def section_title(self, title, color=(0, 0, 0)):
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("Arial", "I", 9)
+        self.set_text_color(128, 128, 128)  # gris clair
+        self.cell(0, 10, f"Page {self.page_no()}", align="C")
+
+    def section_title(self, title, color=(255, 140, 0)):
         self.set_font("Arial", "B", 14)
         self.set_text_color(*color)
-        self.cell(0, 10, title, ln=True)
-        self.ln(3)
+        self.cell(0, 8, title, ln=True)
+        self.set_draw_color(*color)
+        self.set_line_width(0.6)
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+        self.ln(4)
 
     def write_paragraph(self, text, indent=0):
         self.set_font("Arial", "", 12)
         self.set_text_color(0, 0, 0)
-        self.multi_cell(0, 7, " " * indent + text)
-        self.ln(2)
+        left_margin = self.l_margin + indent * 4
+        self.set_x(left_margin)
+        self.multi_cell(self.w - left_margin - self.r_margin, 7, text)
+        self.ln(3)
 
     def write_list(self, items):
-        self.set_font("Arial", "", 12)
-        self.set_text_color(0, 0, 0)
+        bullet_indent = 8
+        text_indent = 12
+
         for item in items:
             titre = item.get("titre", "")
             desc = item.get("description", "")
-            self.set_font(style="B")
-            self.cell(5)
-            self.cell(0, 7, f"• {titre}", ln=True)
+
+            # Puce + titre en gras orange foncé
+            self.set_font("Arial", "B", 12)
+            self.set_text_color(205, 102, 0)  # orange foncé #CD6600
+            self.set_x(self.l_margin + bullet_indent)
+            self.cell(5, 7, "•", ln=False)
+            self.cell(0, 7, f" {titre}", ln=True)
+
+            # Description en normal noir, indentée
             if desc:
-                self.set_font(style="")
-                self.multi_cell(0, 6, "    " + desc)
-            self.ln(1)
+                self.set_font("Arial", "", 12)
+                self.set_text_color(0, 0, 0)
+                self.set_x(self.l_margin + bullet_indent + text_indent)
+                self.multi_cell(self.w - self.l_margin - self.r_margin - bullet_indent - text_indent, 6, desc)
+            self.ln(2)
 
 def generate_pdf_report(data: Dict, filepath: str):
-    """
-    Génère un PDF avec les données d'audit complètes (score, forces, faiblesses, recommandations).
-    """
     pdf = AuditPDF()
     pdf.add_page()
 
     score = data.get("score")
     if score is not None:
-        pdf.set_font("Arial", "B", 18)
-        pdf.set_text_color(0, 100, 0)
-        pdf.cell(0, 10, f"Score Audit : {score}/100", ln=True, align="C")
-        pdf.ln(5)
+        pdf.set_font("Arial", "B", 20)
+        pdf.set_text_color(255, 140, 0)  # orange vif
+        pdf.cell(0, 15, f"Score Audit : {score}/100", ln=True, align="C")
+        pdf.ln(8)
 
     forces = data.get("forces") or []
-    pdf.section_title("Forces", color=(34, 139, 34))
+    pdf.section_title("Forces", color=(255, 165, 79))  # orange clair #FFA54F
     if forces:
         pdf.write_list(forces)
     else:
         pdf.write_paragraph("Aucune force détectée.")
 
-    pdf.ln(5)
+    pdf.ln(8)
 
     faiblesses = data.get("faiblesses") or []
-    pdf.section_title("Faiblesses", color=(178, 34, 34))
+    pdf.section_title("Faiblesses", color=(255, 140, 0))  # orange vif #FF8C00
     if faiblesses:
         pdf.write_list(faiblesses)
     else:
         pdf.write_paragraph("Aucune faiblesse détectée.")
 
-    pdf.ln(5)
+    pdf.ln(8)
 
-    pdf.section_title("Recommandations stratégiques", color=(218, 165, 32))
+    pdf.section_title("Recommandations stratégiques", color=(255, 165, 0))  # orange doré #FFA500
     for periode, label in [("short_term", "Court terme"), ("mid_term", "Moyen terme"), ("long_term", "Long terme")]:
         recos = data.get(periode) or []
         pdf.set_font("Arial", "B", 13)
-        pdf.set_text_color(184, 134, 11)
+        pdf.set_text_color(255, 140, 0)  # orange vif #FF8C00
         pdf.cell(0, 10, label, ln=True)
-        pdf.ln(1)
+        pdf.ln(2)
 
         if recos:
             pdf.write_list(recos)
@@ -159,6 +177,6 @@ def generate_pdf_report(data: Dict, filepath: str):
             pdf.set_text_color(128, 128, 128)
             pdf.cell(0, 7, "Aucune recommandation.", ln=True)
 
-        pdf.ln(4)
+        pdf.ln(6)
 
-    pdf.output(filepath)
+    pdf.output(filepath)             

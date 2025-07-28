@@ -295,17 +295,25 @@ async def audit_business(
             db.add(business_info)
             db.commit()
 
-        pdf_path = export_to_pdf({
+        # CORRECTION: Préparer les données pour le PDF avec la bonne structure
+        pdf_data = {
             "business_data": business_data,
             "score": analysis.get("score", 0),
             "strengths": strengths,
             "weaknesses": weaknesses,
-            "recommendations": [],
-            "short_term": short_term,
+            "short_term": short_term,  # Utiliser les clés anglaises
             "mid_term": mid_term,
             "long_term": long_term,
             "model_used": "gemini-pro"
-        })
+        }
+
+        pdf_path = None
+        try:
+            pdf_path = export_to_pdf(pdf_data)
+            print(f"✅ PDF généré avec succès: {pdf_path}")
+        except Exception as pdf_error:
+            print(f"❌ Erreur génération PDF: {pdf_error}")
+            logger.error(f"Erreur PDF: {pdf_error}")
 
         recommendations = RecommendationsByPeriod(
             short_term=[DetailItem(**item) for item in to_detail_items(action_plan.get("short_term", []))],
@@ -415,10 +423,44 @@ async def get_audit_recommendations(audit_id: int, db: Session = Depends(get_db)
 
 @router.get("/export-pdf/{filename}")
 async def download_pdf(filename: str):
-    file_path = Path("reports") / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Fichier PDF non trouvé")
-    return FileResponse(file_path, media_type="application/pdf", filename=filename)
+    try:
+        # Sécuriser le nom de fichier
+        if not filename.endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="Format de fichier invalide")
+        
+        # Nettoyer le nom de fichier pour éviter les attaques de chemin
+        safe_filename = os.path.basename(filename)
+        file_path = Path("reports") / safe_filename
+        
+        if not file_path.exists():
+            print(f"❌ Fichier PDF non trouvé: {file_path}")
+            raise HTTPException(status_code=404, detail="Fichier PDF non trouvé")
+        
+        # Vérifier que c'est bien un fichier PDF valide
+        file_size = file_path.stat().st_size
+        if file_size < 1000:  # Moins de 1KB
+            print(f"❌ Fichier PDF corrompu (taille: {file_size} bytes): {file_path}")
+            raise HTTPException(status_code=500, detail="Fichier PDF corrompu")
+        
+        print(f"✅ Téléchargement PDF: {file_path} ({file_size} bytes)")
+        
+        return FileResponse(
+            path=file_path,
+            media_type="application/pdf",
+            filename=safe_filename,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Erreur téléchargement PDF: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors du téléchargement du PDF")
 
 
 @router.get("/health")
