@@ -78,17 +78,33 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
       margin: '0 auto',
       marginTop: '60px',
     }}>
+      {/* Logo */}
+      <div style={{
+        width: '60px',
+        height: '60px',
+        backgroundColor: '#ff6b00',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 20px auto'
+      }}>
+        <svg style={{ width: '30px', height: '30px', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+        </svg>
+      </div>
+
       <h2 style={{
         textAlign: 'center',
         fontSize: '28px',
         fontWeight: '700',
         marginBottom: '30px',
-        color: '#1f2937', // gris foncé
+        color: '#1f2937',
       }}>
         Inscription
       </h2>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div>
           <label htmlFor="email" style={{
             display: 'block',
@@ -96,7 +112,7 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
             fontWeight: '500',
             marginBottom: '8px',
             textAlign: 'left',
-            color: '#374151' // gris moyen
+            color: '#374151'
           }}>
             Email
           </label>
@@ -198,6 +214,7 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
 
         <button
           type="submit"
+          onClick={handleSubmit}
           disabled={isLoading}
           style={{
             width: '100%',
@@ -217,7 +234,7 @@ export default function Register({ onRegister, onSwitchToLogin, onBackToLanding 
         >
           {isLoading ? 'Inscription en cours...' : "S'inscrire"}
         </button>
-      </form>
+      </div>
 
       <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '14px', color: '#4b5563' }}>
         <button

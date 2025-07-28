@@ -1,48 +1,66 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 
 export default function LoadingScreen({ businessName, location }) {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="text-center max-w-lg mx-auto">
+        
+        {/* Logo animé */}
         <div className="mb-8">
-          <Search className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Résultats pour : {businessName}, {location}
-          </h2>
+          <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <Search className="w-8 h-8 text-white" />
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+              Analyse en cours
+            </h2>
+            <p className="text-xl font-semibold text-gray-900">
+              {businessName}, {location}
+            </p>
+          </div>
         </div>
         
-        <div className="space-y-6">
-          <h3 className="text-3xl font-bold text-gray-900">
-            Analyse en<br />
-            <span className="text-orange-500">cours...</span>
-          </h3>
-          
-          <div className="text-gray-600 space-y-2">
-            <p>Nous collectons vos données publiques, évaluons votre fiche</p>
-            <p>Google Business et générons votre rapport personnalisé.</p>
+        {/* Status */}
+        <div className="space-y-8">
+          <div className="space-y-3">
+            <h3 className="text-3xl font-bold text-gray-900">
+              Génération de votre
+            </h3>
+            <h3 className="text-3xl font-bold text-orange-500">
+              rapport personnalisé
+            </h3>
           </div>
           
-          {/* Barre de progression */}
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-orange-500 h-2 rounded-full transition-all duration-1000"
-              style={{ 
-                width: '70%',
-                animation: 'progress 3s ease-in-out infinite'
-              }}
-            />
-          </div>
-          
-          <p className="text-gray-500 text-sm">
-            Génération des recommandations...
+          <p className="text-gray-600 leading-relaxed max-w-md mx-auto">
+            Nous analysons vos données publiques et évaluons votre présence en ligne 
+            pour créer vos recommandations sur mesure.
           </p>
+          
+          {/* Barre de progression moderne */}
+          <div className="space-y-4">
+            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-orange-400 to-orange-600 h-full rounded-full transition-all duration-1000 ease-out"
+                style={{ 
+                  width: '75%',
+                  animation: 'modernProgress 3s ease-in-out infinite'
+                }}
+              />
+            </div>
+            
+            <div className="flex items-center justify-center space-x-2 text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm font-medium">Finalisation...</span>
+            </div>
+          </div>
         </div>
         
         <style jsx>{`
-          @keyframes progress {
-            0% { width: 0%; }
-            50% { width: 70%; }
+          @keyframes modernProgress {
+            0% { width: 20%; }
+            50% { width: 75%; }
             100% { width: 100%; }
           }
         `}</style>

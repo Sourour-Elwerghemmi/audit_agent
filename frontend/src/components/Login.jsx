@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MapPin } from 'lucide-react';
 
 export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) {
   const [email, setEmail] = useState('');
@@ -40,10 +41,7 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
       const data = await response.json();
       const accessToken = data.access_token;
 
-      // Stocker le token dans localStorage
-      localStorage.setItem("accessToken", accessToken);
-
-      // On appelle onLogin avec email, nom extrait de l’email, et le token JWT
+      // On appelle onLogin avec email, nom extrait de l'email, et le token JWT
       onLogin({ email, name: email.split('@')[0], token: accessToken });
 
     } catch (error) {
@@ -71,16 +69,29 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
         width: '100%',
         maxWidth: '400px',
       }}>
-        <h2 style={{
-          fontSize: '28px',
-          fontWeight: '700',
-          color: '#111827',
-          marginBottom: '24px',
-          textAlign: 'center',
-        }}>
-          Connexion
-        </h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        
+        {/* Header moderne */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              backgroundColor: '#FF6B00',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: '8px'
+            }}>
+              <MapPin style={{ width: '20px', height: '20px', color: 'white' }} />
+            </div>
+            <span style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+              Agent Local AI
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
             <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
               Email
@@ -98,6 +109,7 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
                 borderRadius: '6px',
                 fontSize: '16px',
                 backgroundColor: '#f9fafb',
+                boxSizing: 'border-box'
               }}
               disabled={isLoading}
             />
@@ -119,17 +131,26 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
                 borderRadius: '6px',
                 fontSize: '16px',
                 backgroundColor: '#f9fafb',
+                boxSizing: 'border-box'
               }}
               disabled={isLoading}
             />
           </div>
           {errorMsg && (
-            <div style={{ color: 'red', fontWeight: '600', textAlign: 'center' }}>
+            <div style={{ 
+              color: '#dc2626', 
+              fontWeight: '600', 
+              textAlign: 'center',
+              backgroundColor: '#fef2f2',
+              padding: '12px',
+              borderRadius: '6px',
+              border: '1px solid #fecaca'
+            }}>
               {errorMsg}
             </div>
           )}
           <button
-            type="submit"
+            onClick={handleSubmit}
             disabled={isLoading}
             style={{
               width: '100%',
@@ -147,11 +168,18 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
           >
             {isLoading ? 'Connexion...' : 'Se connecter'}
           </button>
-        </form>
+        </div>
+
         <div style={{ marginTop: '24px', textAlign: 'center', color: '#6b7280' }}>
           <button
             onClick={onBackToLanding}
-            style={{ marginBottom: '12px', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#6b7280',
+              cursor: 'pointer',
+              marginBottom: '12px',
+            }}
             disabled={isLoading}
           >
             ← Retour à l'accueil
@@ -160,7 +188,13 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
             Pas encore de compte ?{' '}
             <button
               onClick={onSwitchToRegister}
-              style={{ color: '#FF6B00', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+              style={{ 
+                color: '#FF6B00', 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer', 
+                fontWeight: '600' 
+              }}
               disabled={isLoading}
             >
               S'inscrire

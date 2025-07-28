@@ -108,7 +108,10 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <h2 style={styles.title}>⚙️ Modifier le profil</h2>
+          <h3 style={styles.title}>
+            <span style={{color: '#FF6B00', marginRight: '8px'}}>●</span>
+            Modifier le profil
+          </h3>
           <button onClick={onBack} style={styles.backBtn} disabled={isLoading}>
             ⬅ Retour
           </button>
@@ -153,7 +156,10 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
           </div>
 
           <div style={styles.separator}>
-            <h3 style={styles.sectionTitle}>🔒 Modification du mot de passe</h3>
+            <h3 style={styles.sectionTitle}>
+              <span style={{color: '#FF6B00', marginRight: '8px'}}>●</span>
+              Modification du mot de passe
+            </h3>
             <p style={styles.sectionDesc}>Laissez vide si vous ne souhaitez pas changer de mot de passe</p>
           </div>
 
@@ -235,7 +241,7 @@ const styles = {
     marginBottom: '24px',
   },
   title: {
-    fontSize: '26px',
+    fontSize: '22px',
     fontWeight: '700',
     margin: 0,
     color: '#1e293b',
@@ -281,8 +287,8 @@ const styles = {
     borderTop: '1px solid #e2e8f0',
   },
   sectionTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
+    fontSize: '22px',
+    fontWeight: '700',
     color: '#1e293b',
     margin: '0 0 8px 0',
   },
