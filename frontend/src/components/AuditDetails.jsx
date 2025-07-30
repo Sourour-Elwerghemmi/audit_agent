@@ -183,7 +183,6 @@ export default function AuditDetails({ audit, onBack }) {
   console.log('Audit data:', audit);
   console.log('All audit keys:', Object.keys(audit));
   
-  // Recherche des propriétés contenant les forces et faiblesses
   const possibleStrengthsKeys = ['strengths', 'forces', 'points_forts', 'strong_points', 'avantages'];
   const possibleWeaknessesKeys = ['weaknesses', 'faiblesses', 'points_faibles', 'weak_points', 'inconvenients'];
   

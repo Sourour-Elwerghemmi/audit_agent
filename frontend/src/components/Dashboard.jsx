@@ -12,7 +12,6 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
       setLoading(true);
       setError(null);
 
-      // ✅ RÉCUPÉRER LE TOKEN DEPUIS LOCALSTORAGE
       const token = localStorage.getItem('accessToken');
       
       if (!token) {
@@ -33,17 +32,16 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
       console.log('Status réponse audits:', response.status);
 
       if (response.status === 401) {
-        // Si c'est le premier essai et qu'on a une erreur 401, essayer une fois de plus
-        // avec un délai pour laisser le temps au token d'être mis à jour
+        
         if (retryCount === 0) {
           console.log('🔄 Token invalide, tentative de récupération après délai...');
           setTimeout(() => {
-            fetchAudits(1); // Retry une seule fois
+            fetchAudits(1); 
           }, 1000);
           return;
         } else {
           setError('❌ Session expirée, veuillez vous reconnecter');
-          // Optionnel: nettoyer le token invalide
+          
           localStorage.removeItem('accessToken');
           localStorage.removeItem('user');
           setAudits([]);
@@ -60,7 +58,7 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
       const data = await response.json();
       console.log('Audits reçus:', data);
       
-      setAudits(data.audits || data || []); // Gérer les différents formats de réponse
+      setAudits(data.audits || data || []); 
 
     } catch (err) {
       console.error('Erreur de chargement:', err);
@@ -71,11 +69,10 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
   };
 
   useEffect(() => {
-    // ✅ VÉRIFIER QU'ON A UN TOKEN PLUTÔT QU'UN USER
+    
     const token = localStorage.getItem('accessToken');
     if (token) {
-      // Ajouter un petit délai pour s'assurer que le token est bien mis à jour
-      // après une modification de profil
+      
       const timeoutId = setTimeout(() => {
         fetchAudits();
       }, 100);
@@ -85,7 +82,7 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
       setLoading(false);
       setError('Aucun token d\'authentification trouvé');
     }
-  }, [user]); // Garder user en dépendance pour recharger si l'utilisateur change
+  }, [user]);
 
   const filteredAudits = audits.filter((audit) => {
     const searchableFields = [

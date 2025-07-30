@@ -1,4 +1,4 @@
-# routes.py (version complète corrigée)
+
 
 import logging
 import os
@@ -295,13 +295,13 @@ async def audit_business(
             db.add(business_info)
             db.commit()
 
-        # CORRECTION: Préparer les données pour le PDF avec la bonne structure
+       
         pdf_data = {
             "business_data": business_data,
             "score": analysis.get("score", 0),
             "strengths": strengths,
             "weaknesses": weaknesses,
-            "short_term": short_term,  # Utiliser les clés anglaises
+            "short_term": short_term,  
             "mid_term": mid_term,
             "long_term": long_term,
             "model_used": "gemini-pro"

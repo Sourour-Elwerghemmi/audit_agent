@@ -142,7 +142,7 @@ class UserProfile(BaseModel):
     email: EmailStr
     nom: Optional[str]
     prenom: Optional[str]
-    name: str  # Nom complet formaté
+    name: str  
     
     class Config:
         orm_mode = True

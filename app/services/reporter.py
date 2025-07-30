@@ -82,21 +82,20 @@ class AuditPDF(FPDF):
     def __init__(self):
         super().__init__()
         self.set_auto_page_break(auto=True, margin=20)
-        # Couleurs de la palette
-        self.primary_orange = (255, 140, 0)      # #FF8C00
-        self.light_orange = (255, 200, 100)      # #FFC864
-        self.dark_orange = (205, 102, 0)         # #CD6600
-        self.very_light_orange = (255, 245, 230) # #FFF5E6
-        self.gray = (128, 128, 128)              # #808080
-        self.dark_gray = (64, 64, 64)            # #404040
-        self.light_gray = (240, 240, 240)        # #F0F0F0
+      
+        self.primary_orange = (255, 140, 0)     
+        self.light_orange = (255, 200, 100)    
+        self.dark_orange = (205, 102, 0)       
+        self.very_light_orange = (255, 245, 230)
+        self.gray = (128, 128, 128)           
+        self.dark_gray = (64, 64, 64)          
+        self.light_gray = (240, 240, 240)      
 
     def header(self):
-        # En-tête avec dégradé visuel
+        
         self.set_fill_color(*self.primary_orange)
         self.rect(0, 0, self.w, 25, "F")
         
-        # Ligne décorative
         self.set_fill_color(*self.light_orange)
         self.rect(0, 25, self.w, 3, "F")
 
@@ -105,7 +104,6 @@ class AuditPDF(FPDF):
         self.set_y(8)
         self.cell(0, 12, "AUDIT DE VISIBILITÉ LOCALE", border=0, ln=True, align="C")
         
-        # Sous-titre
         self.set_font("Arial", "", 12)
         self.set_text_color(255, 255, 255)
         self.cell(0, 8, "Rapport d'analyse et recommandations", border=0, ln=True, align="C")
@@ -114,13 +112,11 @@ class AuditPDF(FPDF):
     def footer(self):
         self.set_y(-20)
         
-        # Ligne décorative
         self.set_draw_color(*self.primary_orange)
         self.set_line_width(0.5)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
         self.ln(3)
         
-        # Footer en deux parties
         self.set_font("Arial", "I", 9)
         self.set_text_color(*self.gray)
         self.cell(0, 6, f"Page {self.page_no()}", align="C", ln=True)
@@ -137,26 +133,22 @@ class AuditPDF(FPDF):
         note = data.get("note", "N/A")
         nb_avis = data.get("nb_avis", 0)
         
-        # Fond de la boîte
         self.set_fill_color(*self.very_light_orange)
         box_height = 45
         self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, box_height, "F")
         
-        # Border
         self.set_draw_color(*self.light_orange)
         self.set_line_width(1)
         self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, box_height)
         
         y_start = self.get_y() + 5
         
-        # Titre de l'entreprise
         self.set_y(y_start)
         self.set_font("Arial", "B", 14)
         self.set_text_color(*self.dark_orange)
         self.set_x(self.l_margin + 5)
         self.cell(0, 8, nom[:80] + ("..." if len(nom) > 80 else ""), ln=True)
         
-        # Informations détaillées
         info_items = [
             ("Adresse:", adresse[:60] + ("..." if len(adresse) > 60 else "")),
             ("Site web:", site_web),
@@ -178,33 +170,29 @@ class AuditPDF(FPDF):
         if score is None:
             return
             
-        # Position du cercle
         center_x = self.w - 40
         center_y = self.get_y() + 20
         radius = 15
         
-        # Cercle de fond
         self.set_fill_color(*self.light_gray)
         self.set_draw_color(*self.gray)
         self.set_line_width(2)
         
-        # Simulation d'un cercle avec un rectangle arrondi
         self.set_fill_color(*self.very_light_orange)
         self.rect(center_x - radius, center_y - radius, radius * 2, radius * 2, "F")
         
-        # Bordure du score
         color = self.primary_orange if score >= 70 else (255, 165, 0) if score >= 50 else (255, 69, 0)
         self.set_draw_color(*color)
         self.set_line_width(3)
         self.rect(center_x - radius, center_y - radius, radius * 2, radius * 2)
         
-        # Score au centre
+        
         self.set_font("Arial", "B", 16)
         self.set_text_color(*color)
         self.set_xy(center_x - 10, center_y - 5)
         self.cell(20, 10, f"{score}", align="C")
         
-        # Label
+       
         self.set_font("Arial", "", 8)
         self.set_text_color(*self.dark_gray)
         self.set_xy(center_x - 10, center_y + 8)
@@ -214,7 +202,7 @@ class AuditPDF(FPDF):
         """Titre de section avec style amélioré"""
         self.ln(5)
         
-        # Fond coloré pour le titre
+      
         self.set_fill_color(*self.light_orange)
         title_height = 12
         self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, title_height, "F")
@@ -224,7 +212,7 @@ class AuditPDF(FPDF):
         self.set_y(self.get_y() + 2)
         self.cell(0, 8, f"{icon} {title}", ln=True, align="L")
         
-        # Ligne décorative
+        
         self.set_draw_color(*self.primary_orange)
         self.set_line_width(2)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
@@ -236,21 +224,19 @@ class AuditPDF(FPDF):
         
         score = data.get("score")
         if score is not None:
-            # Jauge de score
+            
             self.set_font("Arial", "B", 16)
             self.set_text_color(*self.primary_orange)
             self.cell(0, 10, f"Score Global: {score}/100", ln=True, align="C")
             
-            # Barre de progression
             bar_width = 120
             bar_height = 8
             x_start = (self.w - bar_width) / 2
             
-            # Fond de la barre
+            
             self.set_fill_color(*self.light_gray)
             self.rect(x_start, self.get_y(), bar_width, bar_height, "F")
-            
-            # Barre de progression
+           
             progress_width = (score / 100) * bar_width
             color = self.primary_orange if score >= 70 else (255, 165, 0) if score >= 50 else (255, 69, 0)
             self.set_fill_color(*color)
@@ -271,21 +257,21 @@ class AuditPDF(FPDF):
             titre = item.get("titre", "")
             desc = item.get("description", "")
 
-            # Fond alternant pour chaque item
+        
             if i % 2 == 0:
                 item_height = 15 + (len(desc) // 80) * 6
                 self.set_fill_color(250, 250, 250)
                 self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, item_height, "F")
 
-            # Numérotation et titre
+            
             self.set_font("Arial", "B", 11)
             
-            # Couleur selon le type de liste
+            
             if list_type == "forces":
-                color = (0, 150, 0)  # Vert
+                color = (0, 150, 0)  
                 bullet = "✓"
             elif list_type == "faiblesses":
-                color = (200, 50, 50)  # Rouge
+                color = (200, 50, 50)  
                 bullet = "✗"
             else:
                 color = self.dark_orange

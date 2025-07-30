@@ -16,17 +16,14 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
     setDownloadError(null);
 
     try {
-      // Essayer d'abord avec l'API, puis avec l'accès direct au fichier
       let downloadUrl;
       let fallbackUrl;
       
       if (pdfUrl.startsWith('http')) {
         downloadUrl = pdfUrl;
       } else {
-        // Extraire le nom du fichier et construire l'URL correctement
         const fileName = pdfUrl.split('/').pop().split('\\').pop();
         downloadUrl = `${window.location.origin}/api/export-pdf/${fileName}`;
-        // URL de fallback pour accès direct au fichier
         fallbackUrl = `${window.location.origin}/${pdfUrl.replace(/\\/g, '/')}`;
       }
 
@@ -36,7 +33,6 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
       let finalUrl = downloadUrl;
 
       try {
-        // Essayer d'abord avec l'endpoint API
         response = await fetch(downloadUrl, {
           method: 'GET',
           headers: {
@@ -44,7 +40,6 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
           },
         });
 
-        // Si l'API retourne 404, essayer l'accès direct
         if (!response.ok && response.status === 404 && fallbackUrl) {
           console.log('🔄 Essai d\'accès direct au fichier:', fallbackUrl);
           finalUrl = fallbackUrl;
@@ -56,7 +51,6 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
           });
         }
       } catch (fetchError) {
-        // Si l'endpoint API échoue complètement, essayer l'accès direct
         if (fallbackUrl) {
           console.log('🔄 Fallback vers accès direct:', fallbackUrl);
           finalUrl = fallbackUrl;
@@ -78,27 +72,21 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
         throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
       }
 
-      // Vérifier le type de contenu
       const contentType = response.headers.get('content-type');
       if (contentType && !contentType.includes('application/pdf') && !contentType.includes('octet-stream')) {
         throw new Error('Le fichier téléchargé n\'est pas un PDF valide');
       }
 
-      // Convertir en blob
       const blob = await response.blob();
       
-      // Vérifier la taille du blob
       if (blob.size < 1000) {
         throw new Error('Le fichier PDF semble corrompu (taille trop petite)');
       }
 
-      // Créer l'URL de téléchargement
       const blobUrl = window.URL.createObjectURL(blob);
       
-      // Générer un nom de fichier approprié
       const fileName = pdfUrl.split('/').pop().split('\\').pop() || `rapport_audit_${new Date().toISOString().split('T')[0]}.pdf`;
       
-      // Créer et déclencher le téléchargement
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = fileName;
@@ -108,14 +96,11 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
       link.click();
       document.body.removeChild(link);
       
-      // Nettoyer l'URL blob
       window.URL.revokeObjectURL(blobUrl);
 
-      // Afficher le message de succès
       setShowReadyMessage(true);
       console.log('✅ PDF téléchargé avec succès:', fileName);
 
-      // Masquer le message après 3 secondes
       setTimeout(() => {
         setShowReadyMessage(false);
       }, 3000);
@@ -124,7 +109,6 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
       console.error('❌ Erreur lors du téléchargement:', error);
       setDownloadError(`Erreur de téléchargement: ${error.message}`);
       
-      // Masquer l'erreur après 5 secondes
       setTimeout(() => {
         setDownloadError(null);
       }, 5000);

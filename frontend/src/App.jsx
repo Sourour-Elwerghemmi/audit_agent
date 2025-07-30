@@ -216,7 +216,7 @@ export default function App() {
         businessName={companyInfo.name}
         location={companyInfo.location}
         onNewAudit={handleNewAudit}
-        onBackToHome={handleBackToHome}  // <-- passage de la fonction pour bouton retour accueil
+        onBackToHome={handleBackToHome}  
       />
     );
   }

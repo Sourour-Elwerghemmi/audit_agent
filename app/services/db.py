@@ -45,7 +45,6 @@ def save_audit_to_db(db: Session, name: str, location: str, score: int,
     weaknesses_json = json.dumps(weaknesses, ensure_ascii=False)
     recommendations_json = json.dumps(recommendations, ensure_ascii=False)
     
-    # Création de l'audit
     new_audit = Audit(
         api_key=api_key,
         name=name,
@@ -61,7 +60,6 @@ def save_audit_to_db(db: Session, name: str, location: str, score: int,
     db.commit()
     db.refresh(new_audit)
     
-    # Sauvegarde des informations business si disponibles
     if business_data:
         save_business_info(db, new_audit.id, business_data)
     
@@ -131,10 +129,9 @@ def delete_audit(db: Session, audit_id: int) -> bool:
     if not audit:
         return False
     
-    # Suppression des informations business associées
     db.query(BusinessInfo).filter(BusinessInfo.audit_id == audit_id).delete()
     
-    # Suppression de l'audit
+   
     db.delete(audit)
     db.commit()
     return True
@@ -169,7 +166,6 @@ def audit_to_dict(audit: Audit) -> Dict[str, Any]:
         'created_at': audit.created_at.isoformat() if audit.created_at else None
     }
     
-    # Ajout des informations business si disponibles
     if audit.business_info:
         result['business_data'] = {
             'name': audit.business_info.name,

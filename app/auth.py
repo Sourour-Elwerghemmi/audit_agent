@@ -63,8 +63,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
-
-# OAuth2PasswordBearer optionnel : ne renvoie pas d'erreur si pas de token
 class OAuth2PasswordBearerOptional(OAuth2PasswordBearer):
     async def __call__(self, request: Request) -> Optional[str]:
         authorization: str = request.headers.get("Authorization")

@@ -50,7 +50,6 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
       console.log('Données envoyées:', updateData);
       console.log('Mot de passe modifié:', passwordChanged);
 
-      // Récupération du token depuis localStorage
       const authToken = localStorage.getItem('accessToken');
 
       if (!authToken) {
@@ -87,7 +86,6 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
       const updatedUser = await response.json();
       console.log('Utilisateur mis à jour:', updatedUser);
 
-      // ✅ SI LE MOT DE PASSE A ÉTÉ CHANGÉ, OBTENIR UN NOUVEAU TOKEN
       if (passwordChanged) {
         console.log('🔄 Mot de passe modifié, récupération d\'un nouveau token...');
         
@@ -108,23 +106,20 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
             const newToken = loginData.access_token;
             
             if (newToken) {
-              // Mettre à jour le token dans localStorage
               localStorage.setItem('accessToken', newToken);
               console.log('✅ Nouveau token obtenu et stocké:', newToken.substring(0, 20) + '...');
               
-              // Mettre à jour les données utilisateur avec le nouveau token
               const mergedUserData = {
                 ...updatedUser,
                 nom: nom.trim() || null,
                 prenom: prenom.trim() || null,
                 email: email.trim(),
-                token: newToken // Ajouter le nouveau token
+                token: newToken 
               };
               
               localStorage.setItem('user', JSON.stringify(mergedUserData));
               console.log('✅ Données utilisateur mises à jour avec nouveau token');
               
-              // Passer les nouvelles données au parent
               if (onUpdateSuccess) {
                 onUpdateSuccess(mergedUserData);
               }
@@ -147,7 +142,7 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
           return;
         }
       } else {
-        // ✅ PAS DE CHANGEMENT DE MOT DE PASSE, JUSTE METTRE À JOUR LES DONNÉES
+        
         const existingUserData = JSON.parse(localStorage.getItem('user') || '{}');
         
         const mergedUserData = {

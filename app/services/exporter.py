@@ -94,7 +94,6 @@ class SafePDF(FPDF):
         """Cell sécurisée qui gère les textes longs"""
         try:
             txt = normalize_text(str(txt))
-            # Limiter la longueur du texte pour éviter les débordements
             if len(txt) > 100:
                 txt = txt[:97] + "..."
             self.cell(w, h, txt, border=border, ln=ln, align=align)
@@ -106,19 +105,15 @@ class SafePDF(FPDF):
         try:
             txt = normalize_text(str(txt))
             
-            # Si le texte est trop long, le découper
             if len(txt) > 500:
                 txt = txt[:497] + "..."
             
-            # Vérifier qu'on a assez d'espace horizontal
             if w == 0:
                 w = self.w - self.r_margin - self.l_margin
             
-            # S'assurer qu'on a au moins 20mm d'espace
             if w < 20:
                 w = 20
             
-            # Découper en lignes si nécessaire
             lines = wrap_text(txt, max(50, int(w * 2)))  # Ajuster selon la largeur
             
             for line in lines:
@@ -287,27 +282,21 @@ def export_to_pdf(report: Dict) -> str:
         pdf.safe_cell(0, 8, "Rapport genere par AgentLocalAI", ln=1, align='C')
         pdf.safe_cell(0, 8, "contact@agentlocalai.com", ln=1, align='C')
         
-        # Générer un nom de fichier sécurisé
         safe_name = business_name
         safe_name = ''.join(c for c in safe_name if c.isalnum() or c in (' ', '-', '_')).strip()
-        safe_name = safe_name.replace(' ', '_')[:50]  # Limiter la longueur
-        
-        # CORRECTION: Utiliser des slashes unix pour le chemin de fichier
+        safe_name = safe_name.replace(' ', '_')[:50]  
         filename = f"reports/audit_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         
         # Sauvegarder le PDF
         pdf.output(filename)
         
-        # Vérifier que le fichier a été créé
         if not os.path.exists(filename):
             raise Exception("Le fichier PDF n'a pas ete cree")
         
-        # Vérifier la taille du fichier
         file_size = os.path.getsize(filename)
-        if file_size < 1000:  # Moins de 1KB, probablement corrompu
+        if file_size < 1000:  
             raise Exception("Le fichier PDF semble corrompu (taille trop petite)")
         
-        # CORRECTION: Retourner le chemin avec des slashes unix
         return filename.replace('\\', '/')
         
     except Exception as e:
