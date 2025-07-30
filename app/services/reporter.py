@@ -71,313 +71,259 @@ def generate_action_plan(analysis: Dict) -> Dict:
         return {
             "short_term": sanitize_list(plan.get("short_term", [])),
             "mid_term": sanitize_list(plan.get("mid_term", [])),
-            "long_term": sanitize_list(plan.get("long_term", [])),
+            "long_term": sanitize_list(plan.get("long_term", []))
         }
 
     except Exception as e:
         logger.error("Génération plan d'action échouée : %s", e, exc_info=True)
         return {"short_term": [], "mid_term": [], "long_term": []}
 
-class AuditPDF(FPDF):
+def normalize_text(text: str) -> str:
+    replacements = {
+        'œ': 'oe', 'Œ': 'OE', 'æ': 'ae', 'Æ': 'AE', 'ç': 'c', 'Ç': 'C',
+        'à': 'a', 'À': 'A', 'é': 'e', 'É': 'E', 'è': 'e', 'È': 'E',
+        'ê': 'e', 'Ê': 'E', 'ù': 'u', 'Ù': 'U', 'ô': 'o', 'Ô': 'O',
+    }
+    for bad_char, replacement in replacements.items():
+        text = text.replace(bad_char, replacement)
+    return text
+
+class MinimalAuditPDF(FPDF):
     def __init__(self):
         super().__init__()
-        self.set_auto_page_break(auto=True, margin=20)
-      
-        self.primary_orange = (255, 140, 0)     
-        self.light_orange = (255, 200, 100)    
-        self.dark_orange = (205, 102, 0)       
-        self.very_light_orange = (255, 245, 230)
-        self.gray = (128, 128, 128)           
-        self.dark_gray = (64, 64, 64)          
-        self.light_gray = (240, 240, 240)      
+        self.set_auto_page_break(auto=True, margin=30)
+        
+        # Palette monochrome et minimaliste
+        self.primary = (0, 0, 0)          # Noir
+        self.secondary = (100, 100, 100)  # Gris moyen
+        self.light_gray = (220, 220, 220) # Gris clair
+        self.very_light_gray = (245, 245, 245) # Gris très clair
+        self.white = (255, 255, 255)
+        
+        # Une seule couleur d'accent (orange professionnel)
+        self.accent = (255, 102, 0)       # Orange professionnel
+        
+        # Marges généreuses pour un look aéré
+        self.set_margins(25, 25, 25)
 
     def header(self):
-        
-        self.set_fill_color(*self.primary_orange)
-        self.rect(0, 0, self.w, 25, "F")
-        
-        self.set_fill_color(*self.light_orange)
-        self.rect(0, 25, self.w, 3, "F")
-
-        self.set_font("Arial", "B", 20)
-        self.set_text_color(255, 255, 255)
-        self.set_y(8)
-        self.cell(0, 12, "AUDIT DE VISIBILITÉ LOCALE", border=0, ln=True, align="C")
-        
-        self.set_font("Arial", "", 12)
-        self.set_text_color(255, 255, 255)
-        self.cell(0, 8, "Rapport d'analyse et recommandations", border=0, ln=True, align="C")
-        self.ln(10)
+        # Header épuré sans ligne de titre
+        self.ln(15)
 
     def footer(self):
-        self.set_y(-20)
-        
-        self.set_draw_color(*self.primary_orange)
-        self.set_line_width(0.5)
-        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(3)
-        
-        self.set_font("Arial", "I", 9)
-        self.set_text_color(*self.gray)
-        self.cell(0, 6, f"Page {self.page_no()}", align="C", ln=True)
-        
-        self.set_font("Arial", "B", 9)
-        self.set_text_color(*self.dark_orange)
-        self.cell(0, 6, "Rapport généré par AgentLocalAI - contact@agentlocalai.com", align="C")
-
-    def company_info_box(self, data: Dict):
-        """Boîte d'informations de l'entreprise avec style moderne"""
-        nom = data.get("nom", "N/A")
-        adresse = data.get("adresse", "N/A")
-        site_web = data.get("site_web", "N/A")
-        note = data.get("note", "N/A")
-        nb_avis = data.get("nb_avis", 0)
-        
-        self.set_fill_color(*self.very_light_orange)
-        box_height = 45
-        self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, box_height, "F")
-        
-        self.set_draw_color(*self.light_orange)
-        self.set_line_width(1)
-        self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, box_height)
-        
-        y_start = self.get_y() + 5
-        
-        self.set_y(y_start)
-        self.set_font("Arial", "B", 14)
-        self.set_text_color(*self.dark_orange)
-        self.set_x(self.l_margin + 5)
-        self.cell(0, 8, nom[:80] + ("..." if len(nom) > 80 else ""), ln=True)
-        
-        info_items = [
-            ("Adresse:", adresse[:60] + ("..." if len(adresse) > 60 else "")),
-            ("Site web:", site_web),
-            ("Évaluation:", f"{note} ({nb_avis} avis)" if nb_avis else str(note))
-        ]
+        self.set_y(-25)
+        # Ligne de séparation
+        self.set_draw_color(*self.light_gray)
+        self.set_line_width(0.3)
+        self.line(25, self.get_y() - 8, self.w - 25, self.get_y() - 8)
         
         self.set_font("Arial", "", 10)
-        for label, value in info_items:
-            self.set_x(self.l_margin + 5)
-            self.set_text_color(*self.dark_gray)
-            self.cell(25, 6, label, ln=False)
-            self.set_text_color(0, 0, 0)
-            self.cell(0, 6, value, ln=True)
-        
-        self.set_y(self.get_y() + box_height - 35 + 8)
+        self.set_text_color(*self.secondary)
+        self.cell(0, 10, f"Page {self.page_no()}", align="C")
 
-    def score_circle(self, score):
-        """Cercle de score avec style moderne"""
+    def add_section_title(self, title: str):
+        """Titre de section minimaliste"""
+        self.ln(15)
+        self.set_font("Arial", "B", 16)
+        self.set_text_color(*self.primary)
+        self.cell(0, 10, normalize_text(title), ln=True)
+        
+        # Ligne sous le titre en orange
+        self.set_draw_color(*self.accent)
+        self.set_line_width(2)
+        title_width = self.get_string_width(title)
+        self.line(self.l_margin, self.get_y() + 2, self.l_margin + title_width, self.get_y() + 2)
+        self.ln(10)
+
+    def company_info_section(self, data: Dict):
+        """Section informations entreprise épurée"""
+        nom = normalize_text(data.get("nom", "N/A"))
+        adresse = normalize_text(data.get("adresse", "N/A"))
+        site_web = normalize_text(data.get("site_web", "N/A"))
+        note = data.get("note", "N/A")
+        nb_avis = data.get("nb_avis", 0)
+
+        # Nom de l'entreprise en grand
+        self.set_font("Arial", "B", 24)
+        self.set_text_color(*self.primary)
+        self.cell(0, 15, nom, ln=True, align="C")
+        self.ln(5)
+        
+        # Informations en tableau simple
+        info_data = [
+            ("Adresse", adresse),
+            ("Site web", site_web),
+            ("Note Google", f"{note}/5 ({nb_avis} avis)" if isinstance(note, (int, float)) else f"{note} ({nb_avis} avis)")
+        ]
+        
+        for label, value in info_data:
+            self.set_font("Arial", "B", 11)
+            self.set_text_color(*self.secondary)
+            self.cell(40, 8, f"{label}:")
+            
+            self.set_font("Arial", "", 11)
+            self.set_text_color(*self.primary)
+            self.cell(0, 8, value, ln=True)
+        
+        self.ln(5)
+
+    def score_section(self, data: Dict):
+        """Section score épurée"""
+        score = data.get("score")
         if score is None:
             return
             
-        center_x = self.w - 40
-        center_y = self.get_y() + 20
-        radius = 15
+        self.add_section_title("SCORE GLOBAL")
         
-        self.set_fill_color(*self.light_gray)
-        self.set_draw_color(*self.gray)
-        self.set_line_width(2)
+        # Score en grand au centre en orange
+        self.set_font("Arial", "B", 48)
+        self.set_text_color(*self.accent)
+        self.cell(0, 20, f"{score}", align="C", ln=True)
         
-        self.set_fill_color(*self.very_light_orange)
-        self.rect(center_x - radius, center_y - radius, radius * 2, radius * 2, "F")
+        self.set_font("Arial", "", 14)
+        self.set_text_color(*self.secondary)
+        self.cell(0, 8, "/ 100", align="C", ln=True)
         
-        color = self.primary_orange if score >= 70 else (255, 165, 0) if score >= 50 else (255, 69, 0)
-        self.set_draw_color(*color)
-        self.set_line_width(3)
-        self.rect(center_x - radius, center_y - radius, radius * 2, radius * 2)
+        # Barre de progression simple
+        self.ln(10)
+        bar_width = 120
+        bar_height = 8
+        x_center = (self.w - bar_width) / 2
         
+        # Fond de la barre
+        self.set_fill_color(*self.very_light_gray)
+        self.rect(x_center, self.get_y(), bar_width, bar_height, "F")
         
-        self.set_font("Arial", "B", 16)
-        self.set_text_color(*color)
-        self.set_xy(center_x - 10, center_y - 5)
-        self.cell(20, 10, f"{score}", align="C")
+        # Progression
+        self.set_fill_color(*self.accent)
+        progress_width = (score / 100) * bar_width
+        if progress_width > 0:
+            self.rect(x_center, self.get_y(), progress_width, bar_height, "F")
         
-       
-        self.set_font("Arial", "", 8)
-        self.set_text_color(*self.dark_gray)
-        self.set_xy(center_x - 10, center_y + 8)
-        self.cell(20, 4, "/100", align="C")
+        self.ln(20)
 
-    def section_title(self, title, icon=""):
-        """Titre de section avec style amélioré"""
-        self.ln(5)
+    def simple_list_section(self, items, title):
+        """Section liste simple et élégante avec descriptions complètes"""
+        self.add_section_title(title)
         
-      
-        self.set_fill_color(*self.light_orange)
-        title_height = 12
-        self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, title_height, "F")
-        
-        self.set_font("Arial", "B", 14)
-        self.set_text_color(*self.dark_orange)
-        self.set_y(self.get_y() + 2)
-        self.cell(0, 8, f"{icon} {title}", ln=True, align="L")
-        
-        
-        self.set_draw_color(*self.primary_orange)
-        self.set_line_width(2)
-        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(8)
-
-    def diagnostic_summary(self, data: Dict):
-        """Résumé du diagnostic avec indicateurs visuels"""
-        self.section_title("DIAGNOSTIC GÉNÉRAL", "📊")
-        
-        score = data.get("score")
-        if score is not None:
-            
-            self.set_font("Arial", "B", 16)
-            self.set_text_color(*self.primary_orange)
-            self.cell(0, 10, f"Score Global: {score}/100", ln=True, align="C")
-            
-            bar_width = 120
-            bar_height = 8
-            x_start = (self.w - bar_width) / 2
-            
-            
-            self.set_fill_color(*self.light_gray)
-            self.rect(x_start, self.get_y(), bar_width, bar_height, "F")
-           
-            progress_width = (score / 100) * bar_width
-            color = self.primary_orange if score >= 70 else (255, 165, 0) if score >= 50 else (255, 69, 0)
-            self.set_fill_color(*color)
-            self.rect(x_start, self.get_y(), progress_width, bar_height, "F")
-            
-            self.ln(15)
-
-    def write_list_modern(self, items, list_type="default"):
-        """Liste avec style moderne et puces personnalisées"""
         if not items:
             self.set_font("Arial", "I", 11)
-            self.set_text_color(*self.gray)
-            self.cell(0, 7, "Aucun élément à afficher.", ln=True)
-            self.ln(3)
+            self.set_text_color(*self.secondary)
+            self.cell(0, 8, "Aucun element identifie", ln=True)
+            self.ln(10)
             return
-
-        for i, item in enumerate(items, 1):
-            titre = item.get("titre", "")
-            desc = item.get("description", "")
-
         
-            if i % 2 == 0:
-                item_height = 15 + (len(desc) // 80) * 6
-                self.set_fill_color(250, 250, 250)
-                self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, item_height, "F")
-
+        for i, item in enumerate(items, 1):
+            titre = normalize_text(item.get("titre", ""))
+            desc = normalize_text(item.get("description", ""))
             
-            self.set_font("Arial", "B", 11)
+            # Numéro en cercle simple
+            self.set_font("Arial", "B", 10)
+            self.set_text_color(*self.white)
+            self.set_fill_color(*self.secondary)
+            self.cell(6, 6, str(i), align="C", fill=True)
             
+            # Titre
+            self.set_x(self.l_margin + 10)
+            self.set_font("Arial", "B", 12)
+            self.set_text_color(*self.primary)
+            self.cell(0, 6, titre, ln=True)
             
-            if list_type == "forces":
-                color = (0, 150, 0)  
-                bullet = "✓"
-            elif list_type == "faiblesses":
-                color = (200, 50, 50)  
-                bullet = "✗"
-            else:
-                color = self.dark_orange
-                bullet = f"{i}."
-            
-            self.set_text_color(*color)
-            self.set_x(self.l_margin + 5)
-            self.cell(8, 7, bullet, ln=False)
-            
-            # Titre en gras
-            self.set_text_color(*self.dark_gray)
-            self.cell(0, 7, titre, ln=True)
-
-            # Description avec retrait
+            # Description complète avec multi_cell pour gérer les retours à la ligne
             if desc:
                 self.set_font("Arial", "", 10)
-                self.set_text_color(0, 0, 0)
-                self.set_x(self.l_margin + 15)
-                
-                # Découpage intelligent du texte
-                words = desc.split()
-                lines = []
-                current_line = ""
-                max_chars = 85
-                
-                for word in words:
-                    if len(current_line + " " + word) <= max_chars:
-                        current_line += (" " if current_line else "") + word
-                    else:
-                        if current_line:
-                            lines.append(current_line)
-                        current_line = word
-                
-                if current_line:
-                    lines.append(current_line)
-                
-                for line in lines:
-                    self.set_x(self.l_margin + 15)
-                    self.cell(0, 6, line, ln=True)
+                self.set_text_color(*self.secondary)
+                self.set_x(self.l_margin + 10)
+                # Utilisation de multi_cell avec une largeur appropriée pour afficher le texte complet
+                available_width = self.w - self.l_margin - self.r_margin - 10
+                self.multi_cell(available_width, 5, desc)
             
-            self.ln(4)
+            self.ln(8)
 
     def action_plan_section(self, data: Dict):
-        """Section plan d'action avec timeline visuelle"""
-        self.add_page()
-        self.section_title("PLAN D'ACTION STRATÉGIQUE", "🎯")
+        """Plan d'action épuré avec descriptions complètes"""
+        self.add_section_title("PLAN D'ACTION")
         
-        periods = [
-            ("short_term", "Actions à Court Terme", "🚀", (255, 100, 100)),
-            ("mid_term", "Actions à Moyen Terme", "📈", (255, 165, 0)),
-            ("long_term", "Actions à Long Terme", "🎯", (50, 150, 50))
+        sections = [
+            ("short_term", "Actions immediates", "1-7 jours"),
+            ("mid_term", "Actions a moyen terme", "1-3 mois"), 
+            ("long_term", "Actions a long terme", "3-6 mois")
         ]
         
-        for period_key, period_label, icon, color in periods:
-            actions = data.get(period_key, [])
-            
-            # Titre de période avec couleur distinctive
+        for key, label, timeline in sections:
+            items = data.get(key, [])
+            if not items:
+                continue
+                
+            # En-tête de section avec timeline
             self.ln(8)
-            self.set_fill_color(*color)
-            self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, 10, "F")
+            self.set_font("Arial", "B", 14)
+            self.set_text_color(*self.primary)
+            self.cell(120, 8, label)
             
-            self.set_font("Arial", "B", 13)
-            self.set_text_color(255, 255, 255)
-            self.set_y(self.get_y() + 1)
-            self.cell(0, 8, f"{icon} {period_label}", ln=True, align="C")
-            self.ln(6)
+            self.set_font("Arial", "I", 10)
+            self.set_text_color(*self.secondary)
+            self.cell(0, 8, timeline, align="R", ln=True)
             
-            self.write_list_modern(actions)
+            # Ligne de séparation
+            self.set_draw_color(*self.light_gray)
+            self.set_line_width(0.5)
+            self.line(self.l_margin, self.get_y() + 2, self.w - self.r_margin, self.get_y() + 2)
+            self.ln(8)
+            
+            # Actions avec descriptions complètes
+            for i, item in enumerate(items, 1):
+                titre = normalize_text(item.get("titre", ""))
+                desc = normalize_text(item.get("description", ""))
+                
+                # Puce simple en orange
+                self.set_font("Arial", "B", 12)
+                self.set_text_color(*self.accent)
+                self.cell(8, 6, f"{i}.")
+                
+                # Titre de l'action
+                self.set_font("Arial", "B", 11)
+                self.set_text_color(*self.primary)
+                self.cell(0, 6, titre, ln=True)
+                
+                # Description complète avec multi_cell
+                if desc:
+                    self.set_font("Arial", "", 10)
+                    self.set_text_color(*self.secondary)
+                    self.set_x(self.l_margin + 8)
+                    # Largeur disponible en tenant compte de l'indentation
+                    available_width = self.w - self.l_margin - self.r_margin - 8
+                    self.multi_cell(available_width, 5, desc)
+                
+                self.ln(6)
+            
+            self.ln(5)
+
+    def add_generation_info(self):
+        """Informations de génération en bas de première page"""
+        now = datetime.now()
+        self.set_font("Arial", "", 9)
+        self.set_text_color(*self.secondary)
+        self.cell(0, 6, normalize_text(f"Rapport genere le {now.strftime('%d/%m/%Y a %H:%M')}"), 
+                 ln=True, align="R")
+        self.ln(10)
 
 def generate_pdf_report(data: Dict, filepath: str):
-    """Génération du rapport PDF avec mise en page améliorée"""
-    pdf = AuditPDF()
+    """Génère le rapport PDF avec design minimaliste"""
+    pdf = MinimalAuditPDF()
     pdf.add_page()
     
-    # Date de génération
-    now = datetime.now()
-    pdf.set_font("Arial", "", 10)
-    pdf.set_text_color(*pdf.gray)
-    pdf.cell(0, 6, f"Généré le {now.strftime('%d/%m/%Y à %H:%M')}", ln=True, align="R")
-    pdf.ln(5)
-    
-    # Informations de l'entreprise
-    pdf.section_title("INFORMATIONS DE L'ENTREPRISE", "🏢")
-    pdf.company_info_box(data)
-    pdf.ln(10)
-    
-    # Diagnostic avec score
-    pdf.diagnostic_summary(data)
-    
-    # Points forts
-    forces = data.get("forces", [])
-    pdf.section_title("POINTS FORTS", "✅")
-    pdf.write_list_modern(forces, "forces")
-    pdf.ln(5)
-    
-    # Points faibles
-    faiblesses = data.get("faiblesses", [])
-    pdf.section_title("POINTS D'AMÉLIORATION", "⚠️")
-    pdf.write_list_modern(faiblesses, "faiblesses")
-    
-    # Plan d'action
+    # Sections du rapport
+    pdf.add_generation_info()
+    pdf.company_info_section(data)
+    pdf.score_section(data)
+    pdf.simple_list_section(data.get("forces", []), "POINTS FORTS")
+    pdf.simple_list_section(data.get("faiblesses", []), "POINTS A AMELIORER")
     pdf.action_plan_section(data)
     
     try:
         pdf.output(filepath)
-        logger.info(f"Rapport PDF généré avec succès: {filepath}")
+        logger.info(f"Rapport PDF minimaliste généré avec succès: {filepath}")
     except Exception as e:
         logger.error(f"Erreur lors de la génération du PDF: {e}")
         raise
