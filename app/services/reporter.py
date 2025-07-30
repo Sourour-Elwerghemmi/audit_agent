@@ -231,9 +231,9 @@ class MinimalAuditPDF(FPDF):
         self.add_section_title("PLAN D'ACTION")
         
         sections = [
-            ("short_term", "Actions immediates", "1-7 jours"),
-            ("mid_term", "Actions a moyen terme", "1-3 mois"), 
-            ("long_term", "Actions a long terme", "3-6 mois")
+            ("short_term", "Actions immediates", ""),
+            ("mid_term", "Actions a moyen terme", ""), 
+            ("long_term", "Actions a long terme", "")
         ]
         
         for key, label, timeline in sections:
