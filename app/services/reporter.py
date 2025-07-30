@@ -93,26 +93,21 @@ class MinimalAuditPDF(FPDF):
         super().__init__()
         self.set_auto_page_break(auto=True, margin=30)
         
-        # Palette monochrome et minimaliste
-        self.primary = (0, 0, 0)          # Noir
-        self.secondary = (100, 100, 100)  # Gris moyen
-        self.light_gray = (220, 220, 220) # Gris clair
-        self.very_light_gray = (245, 245, 245) # Gris très clair
+        self.primary = (0, 0, 0)        
+        self.secondary = (100, 100, 100) 
+        self.light_gray = (220, 220, 220) 
+        self.very_light_gray = (245, 245, 245) 
         self.white = (255, 255, 255)
         
-        # Une seule couleur d'accent (orange professionnel)
-        self.accent = (255, 102, 0)       # Orange professionnel
+        self.accent = (255, 102, 0)      
         
-        # Marges généreuses pour un look aéré
         self.set_margins(25, 25, 25)
 
     def header(self):
-        # Header épuré sans ligne de titre
         self.ln(15)
 
     def footer(self):
         self.set_y(-25)
-        # Ligne de séparation
         self.set_draw_color(*self.light_gray)
         self.set_line_width(0.3)
         self.line(25, self.get_y() - 8, self.w - 25, self.get_y() - 8)
@@ -128,7 +123,6 @@ class MinimalAuditPDF(FPDF):
         self.set_text_color(*self.primary)
         self.cell(0, 10, normalize_text(title), ln=True)
         
-        # Ligne sous le titre en orange
         self.set_draw_color(*self.accent)
         self.set_line_width(2)
         title_width = self.get_string_width(title)
@@ -143,7 +137,7 @@ class MinimalAuditPDF(FPDF):
         note = data.get("note", "N/A")
         nb_avis = data.get("nb_avis", 0)
 
-        # Nom de l'entreprise en grand
+      
         self.set_font("Arial", "B", 24)
         self.set_text_color(*self.primary)
         self.cell(0, 15, nom, ln=True, align="C")
@@ -175,7 +169,6 @@ class MinimalAuditPDF(FPDF):
             
         self.add_section_title("SCORE GLOBAL")
         
-        # Score en grand au centre en orange
         self.set_font("Arial", "B", 48)
         self.set_text_color(*self.accent)
         self.cell(0, 20, f"{score}", align="C", ln=True)
@@ -184,17 +177,14 @@ class MinimalAuditPDF(FPDF):
         self.set_text_color(*self.secondary)
         self.cell(0, 8, "/ 100", align="C", ln=True)
         
-        # Barre de progression simple
         self.ln(10)
         bar_width = 120
         bar_height = 8
         x_center = (self.w - bar_width) / 2
         
-        # Fond de la barre
         self.set_fill_color(*self.very_light_gray)
         self.rect(x_center, self.get_y(), bar_width, bar_height, "F")
         
-        # Progression
         self.set_fill_color(*self.accent)
         progress_width = (score / 100) * bar_width
         if progress_width > 0:
@@ -217,24 +207,20 @@ class MinimalAuditPDF(FPDF):
             titre = normalize_text(item.get("titre", ""))
             desc = normalize_text(item.get("description", ""))
             
-            # Numéro en cercle simple
             self.set_font("Arial", "B", 10)
             self.set_text_color(*self.white)
             self.set_fill_color(*self.secondary)
             self.cell(6, 6, str(i), align="C", fill=True)
             
-            # Titre
             self.set_x(self.l_margin + 10)
             self.set_font("Arial", "B", 12)
             self.set_text_color(*self.primary)
             self.cell(0, 6, titre, ln=True)
             
-            # Description complète avec multi_cell pour gérer les retours à la ligne
             if desc:
                 self.set_font("Arial", "", 10)
                 self.set_text_color(*self.secondary)
                 self.set_x(self.l_margin + 10)
-                # Utilisation de multi_cell avec une largeur appropriée pour afficher le texte complet
                 available_width = self.w - self.l_margin - self.r_margin - 10
                 self.multi_cell(available_width, 5, desc)
             
@@ -255,7 +241,6 @@ class MinimalAuditPDF(FPDF):
             if not items:
                 continue
                 
-            # En-tête de section avec timeline
             self.ln(8)
             self.set_font("Arial", "B", 14)
             self.set_text_color(*self.primary)
@@ -265,33 +250,28 @@ class MinimalAuditPDF(FPDF):
             self.set_text_color(*self.secondary)
             self.cell(0, 8, timeline, align="R", ln=True)
             
-            # Ligne de séparation
             self.set_draw_color(*self.light_gray)
             self.set_line_width(0.5)
             self.line(self.l_margin, self.get_y() + 2, self.w - self.r_margin, self.get_y() + 2)
             self.ln(8)
             
-            # Actions avec descriptions complètes
             for i, item in enumerate(items, 1):
                 titre = normalize_text(item.get("titre", ""))
                 desc = normalize_text(item.get("description", ""))
                 
-                # Puce simple en orange
                 self.set_font("Arial", "B", 12)
                 self.set_text_color(*self.accent)
                 self.cell(8, 6, f"{i}.")
                 
-                # Titre de l'action
                 self.set_font("Arial", "B", 11)
                 self.set_text_color(*self.primary)
                 self.cell(0, 6, titre, ln=True)
                 
-                # Description complète avec multi_cell
                 if desc:
                     self.set_font("Arial", "", 10)
                     self.set_text_color(*self.secondary)
                     self.set_x(self.l_margin + 8)
-                    # Largeur disponible en tenant compte de l'indentation
+                   
                     available_width = self.w - self.l_margin - self.r_margin - 8
                     self.multi_cell(available_width, 5, desc)
                 
