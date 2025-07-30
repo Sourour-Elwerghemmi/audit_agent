@@ -7,35 +7,60 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchAudits = async () => {
+  const fetchAudits = async (retryCount = 0) => {
     try {
       setLoading(true);
       setError(null);
 
-      if (!user || !user.token) {
+      // ✅ RÉCUPÉRER LE TOKEN DEPUIS LOCALSTORAGE
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
         setError('❌ Session expirée, veuillez vous reconnecter');
         return;
       }
+
+      console.log('Récupération des audits avec token:', token.substring(0, 20) + '...');
 
       const response = await fetch('/api/user/audits', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
+      console.log('Status réponse audits:', response.status);
+
       if (response.status === 401) {
-        setError('❌ Session expirée, veuillez vous reconnecter');
-        setAudits([]);
-        return;
+        // Si c'est le premier essai et qu'on a une erreur 401, essayer une fois de plus
+        // avec un délai pour laisser le temps au token d'être mis à jour
+        if (retryCount === 0) {
+          console.log('🔄 Token invalide, tentative de récupération après délai...');
+          setTimeout(() => {
+            fetchAudits(1); // Retry une seule fois
+          }, 1000);
+          return;
+        } else {
+          setError('❌ Session expirée, veuillez vous reconnecter');
+          // Optionnel: nettoyer le token invalide
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('user');
+          setAudits([]);
+          return;
+        }
       }
+
       if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Erreur API audits:', errorData);
         throw new Error(`Erreur lors de la récupération des audits: ${response.status}`);
       }
 
       const data = await response.json();
-      setAudits(data.audits || []);
+      console.log('Audits reçus:', data);
+      
+      setAudits(data.audits || data || []); // Gérer les différents formats de réponse
 
     } catch (err) {
       console.error('Erreur de chargement:', err);
@@ -44,14 +69,23 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
       setLoading(false);
     }
   };
+
   useEffect(() => {
-    if (user) {
-      fetchAudits();
+    // ✅ VÉRIFIER QU'ON A UN TOKEN PLUTÔT QU'UN USER
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      // Ajouter un petit délai pour s'assurer que le token est bien mis à jour
+      // après une modification de profil
+      const timeoutId = setTimeout(() => {
+        fetchAudits();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     } else {
       setLoading(false);
-      setError('Utilisateur non connecté');
+      setError('Aucun token d\'authentification trouvé');
     }
-  }, [user]);
+  }, [user]); // Garder user en dépendance pour recharger si l'utilisateur change
 
   const filteredAudits = audits.filter((audit) => {
     const searchableFields = [
@@ -71,6 +105,7 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
     (currentPage - 1) * auditsPerPage,
     currentPage * auditsPerPage
   );
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
@@ -79,7 +114,7 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
           <div className="flex items-center space-x-4">
             {user && process.env.NODE_ENV === 'development' && (
               <span className="text-sm text-gray-500">
-                Connecté: {user.name || user.email || user.id}
+                Connecté: {user.prenom && user.nom ? `${user.prenom} ${user.nom}` : user.name || user.email || 'Utilisateur'}
               </span>
             )}
             <button 
@@ -122,11 +157,19 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
             <p><strong>Erreur:</strong> {error}</p>
             <button 
-              onClick={fetchAudits}
+              onClick={() => fetchAudits()}
               className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
             >
               Réessayer
             </button>
+            {error.includes('Session expirée') && (
+              <button 
+                onClick={onConfirmLogout}
+                className="mt-2 ml-2 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+              >
+                Se reconnecter
+              </button>
+            )}
           </div>
         )}
 
@@ -160,7 +203,7 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
               ) : (
                 currentAudits.map((audit, index) => (
                   <tr key={audit.id || index} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">{audit.name || audit.company || 'Entreprise inconnue'}</td>
+                    <td className="px-6 py-4">{audit.name || audit.company || audit.nom_entreprise || 'Entreprise inconnue'}</td>
                     <td className="px-6 py-4">{audit.location || 'Non spécifiée'}</td>
                     <td className="px-6 py-4">
                       {(audit.date || audit.created_at) ? new Date(audit.date || audit.created_at).toLocaleDateString('fr-FR') : 'N/A'}
@@ -173,7 +216,7 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
                         }} 
                         className="px-3 py-1 inline-flex text-md leading-5 font-semibold rounded-full"
                       >
-                        {audit.score || 'N/A'}
+                        {audit.score !== undefined && audit.score !== null ? `${audit.score}/100` : 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -193,9 +236,21 @@ export default function Dashboard({ user, onConfirmLogout, onNewAudit, onViewSet
 
         {totalPages > 1 && !loading && (
           <div className="flex justify-center items-center space-x-4">
-            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50">Précédent</button>
+            <button 
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+              disabled={currentPage === 1} 
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50 hover:bg-gray-300 transition-colors"
+            >
+              Précédent
+            </button>
             <span className="text-gray-700">Page {currentPage} sur {totalPages}</span>
-            <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50">Suivant</button>
+            <button 
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} 
+              disabled={currentPage === totalPages} 
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50 hover:bg-gray-300 transition-colors"
+            >
+              Suivant
+            </button>
           </div>
         )}
       </div>

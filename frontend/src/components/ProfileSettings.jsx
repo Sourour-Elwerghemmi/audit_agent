@@ -42,13 +42,15 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
         email: email.trim(),
       };
 
+      const passwordChanged = !!newPassword;
       if (newPassword) {
         updateData.new_password = newPassword;
       }
 
       console.log('Données envoyées:', updateData);
+      console.log('Mot de passe modifié:', passwordChanged);
 
-      // Récupération dynamique du token depuis localStorage
+      // Récupération du token depuis localStorage
       const authToken = localStorage.getItem('accessToken');
 
       if (!authToken) {
@@ -56,6 +58,8 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
         setIsLoading(false);
         return;
       }
+
+      console.log('Token récupéré:', authToken.substring(0, 20) + '...');
 
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
@@ -66,27 +70,106 @@ export default function ProfileSettings({ user, onBack, onUpdateSuccess }) {
         body: JSON.stringify(updateData)
       });
 
+      console.log('Status de réponse:', response.status);
+
       if (response.status === 401) {
-        setErrorMsg("Session expirée, veuillez vous reconnecter");
+        setErrorMsg("Mot de passe actuel incorrect");
         setIsLoading(false);
         return;
       }
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.log('Erreur serveur:', errorData);
         throw new Error(errorData.detail || 'Erreur lors de la mise à jour');
       }
 
       const updatedUser = await response.json();
+      console.log('Utilisateur mis à jour:', updatedUser);
+
+      // ✅ SI LE MOT DE PASSE A ÉTÉ CHANGÉ, OBTENIR UN NOUVEAU TOKEN
+      if (passwordChanged) {
+        console.log('🔄 Mot de passe modifié, récupération d\'un nouveau token...');
+        
+        try {
+          const loginResponse = await fetch('/api/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              username: email.trim(),
+              password: newPassword,
+            }),
+          });
+
+          if (loginResponse.ok) {
+            const loginData = await loginResponse.json();
+            const newToken = loginData.access_token;
+            
+            if (newToken) {
+              // Mettre à jour le token dans localStorage
+              localStorage.setItem('accessToken', newToken);
+              console.log('✅ Nouveau token obtenu et stocké:', newToken.substring(0, 20) + '...');
+              
+              // Mettre à jour les données utilisateur avec le nouveau token
+              const mergedUserData = {
+                ...updatedUser,
+                nom: nom.trim() || null,
+                prenom: prenom.trim() || null,
+                email: email.trim(),
+                token: newToken // Ajouter le nouveau token
+              };
+              
+              localStorage.setItem('user', JSON.stringify(mergedUserData));
+              console.log('✅ Données utilisateur mises à jour avec nouveau token');
+              
+              // Passer les nouvelles données au parent
+              if (onUpdateSuccess) {
+                onUpdateSuccess(mergedUserData);
+              }
+            } else {
+              console.error('❌ Nouveau token non reçu');
+              setErrorMsg("Erreur lors de la récupération du nouveau token");
+              setIsLoading(false);
+              return;
+            }
+          } else {
+            console.error('❌ Échec de la récupération du nouveau token');
+            setErrorMsg("Erreur lors de la récupération du nouveau token");
+            setIsLoading(false);
+            return;
+          }
+        } catch (tokenError) {
+          console.error('❌ Erreur lors de la récupération du token:', tokenError);
+          setErrorMsg("Erreur lors de la récupération du nouveau token");
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // ✅ PAS DE CHANGEMENT DE MOT DE PASSE, JUSTE METTRE À JOUR LES DONNÉES
+        const existingUserData = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        const mergedUserData = {
+          ...existingUserData,
+          ...updatedUser,
+          nom: nom.trim() || null,
+          prenom: prenom.trim() || null,
+          email: email.trim(),
+        };
+
+        localStorage.setItem('user', JSON.stringify(mergedUserData));
+        console.log('✅ Données utilisateur mises à jour dans localStorage:', mergedUserData);
+
+        if (onUpdateSuccess) {
+          onUpdateSuccess(mergedUserData);
+        }
+      }
 
       setSuccessMsg("Profil mis à jour avec succès !");
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-
-      if (onUpdateSuccess) {
-        onUpdateSuccess(updatedUser);
-      }
 
       setTimeout(() => {
         setShowConfirmation(true);

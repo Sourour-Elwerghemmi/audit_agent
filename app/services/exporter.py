@@ -30,17 +30,13 @@ def normalize_text(text: str) -> str:
         '…': '...', '–': '-', '—': '-'
     }
     
-    # Appliquer les remplacements
     for old, new in replacements.items():
         text = text.replace(old, new)
     
-    # Encoder/décoder pour nettoyer
     try:
-        # Essayer l'encodage latin-1 direct
         text.encode('latin-1')
         return text
     except UnicodeEncodeError:
-        # Si ça échoue, nettoyer plus agressivement
         clean_text = ""
         for char in text:
             try:
@@ -103,7 +99,6 @@ class SafePDF(FPDF):
                 txt = txt[:97] + "..."
             self.cell(w, h, txt, border=border, ln=ln, align=align)
         except Exception as e:
-            # Supprimer le message de debug
             self.cell(w, h, "Erreur affichage", border=border, ln=ln, align=align)
     
     def safe_multi_cell(self, w, h, txt="", align='L', border=0):
@@ -131,7 +126,6 @@ class SafePDF(FPDF):
                     self.multi_cell(w, h, line, border=border, align=align)
                     
         except Exception as e:
-            # Supprimer le message de debug
             # En cas d'erreur, utiliser cell simple
             try:
                 self.cell(w, h, "Description disponible", border=border, ln=1, align=align)
@@ -142,7 +136,8 @@ def export_to_pdf(report: Dict) -> str:
     """Génère un PDF à partir du rapport d'audit"""
     try:
         # Créer le dossier reports si nécessaire
-        Path("reports").mkdir(exist_ok=True)
+        reports_dir = Path("reports")
+        reports_dir.mkdir(exist_ok=True)
         
         # Initialiser le PDF avec la classe sécurisée
         pdf = SafePDF()
@@ -195,7 +190,7 @@ def export_to_pdf(report: Dict) -> str:
         
         pdf.ln(10)
         
-        # === 2. SCORE ET DIAGNOSTIC ===
+        # === 2. DIAGNOSTIC GENERAL ===
         pdf.set_font("Arial", 'B', 14)
         pdf.safe_cell(0, 10, "2. DIAGNOSTIC GENERAL", ln=1)
         pdf.set_font("Arial", size=11)
@@ -211,10 +206,9 @@ def export_to_pdf(report: Dict) -> str:
         
         strengths = report.get('strengths', [])
         if strengths:
-            for strength in strengths[:10]:  # Limiter à 10 éléments
+            for strength in strengths[:10]:  
                 text = safe_get_text(strength, "titre")
                 if text:
-                    # Découper le texte si trop long
                     if len(text) > 70:
                         pdf.safe_cell(0, 6, f"+ {text[:67]}...", ln=1)
                     else:
@@ -231,10 +225,9 @@ def export_to_pdf(report: Dict) -> str:
         
         weaknesses = report.get('weaknesses', [])
         if weaknesses:
-            for weakness in weaknesses[:10]:  # Limiter à 10 éléments
+            for weakness in weaknesses[:10]: 
                 text = safe_get_text(weakness, "titre")
                 if text:
-                    # Découper le texte si trop long
                     if len(text) > 70:
                         pdf.safe_cell(0, 6, f"- {text[:67]}...", ln=1)
                     else:
@@ -248,7 +241,6 @@ def export_to_pdf(report: Dict) -> str:
         pdf.set_font("Arial", 'B', 14)
         pdf.safe_cell(0, 10, "3. PLAN D'ACTION", ln=1)
         
-        # Mapping des périodes (le code utilise les clés anglaises)
         periods = [
             ('short_term', 'Actions a court terme '),
             ('mid_term', 'Actions a moyen terme '),
@@ -262,7 +254,7 @@ def export_to_pdf(report: Dict) -> str:
                 pdf.safe_cell(0, 8, period_label, ln=1)
                 pdf.set_font("Arial", size=10)
                 
-                for i, action in enumerate(actions[:8], 1):  # Limiter à 8 actions par période
+                for i, action in enumerate(actions[:8], 1):  
                     if isinstance(action, dict):
                         title = action.get('title') or action.get('titre', '')
                         description = action.get('description', '')
@@ -273,37 +265,34 @@ def export_to_pdf(report: Dict) -> str:
                     if title:
                         title_text = normalize_text(f"{i}. {title}")
                         
-                        # Gérer les titres longs
                         if len(title_text) > 75:
                             pdf.safe_cell(0, 6, f"{title_text[:72]}...", ln=1)
                         else:
                             pdf.safe_cell(0, 6, title_text, ln=1)
                         
-                        # Gérer les descriptions
                         if description and description.strip():
                             desc_text = normalize_text(description)
                             if len(desc_text) > 200:
                                 desc_text = desc_text[:197] + "..."
                             
-                            # Utiliser multi_cell pour les descriptions avec indentation
                             pdf.safe_multi_cell(0, 5, f"   {desc_text}")
                         
                         pdf.ln(2)
                 
                 pdf.ln(5)
         
-        # === FOOTER ===
+        # Footer
         pdf.ln(10)
         pdf.set_font("Arial", 'I', 9)
         pdf.safe_cell(0, 8, "Rapport genere par AgentLocalAI", ln=1, align='C')
         pdf.safe_cell(0, 8, "contact@agentlocalai.com", ln=1, align='C')
         
-        # Générer le nom de fichier sécurisé
+        # Générer un nom de fichier sécurisé
         safe_name = business_name
-        # Nettoyer le nom pour le fichier
         safe_name = ''.join(c for c in safe_name if c.isalnum() or c in (' ', '-', '_')).strip()
         safe_name = safe_name.replace(' ', '_')[:50]  # Limiter la longueur
         
+        # CORRECTION: Utiliser des slashes unix pour le chemin de fichier
         filename = f"reports/audit_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         
         # Sauvegarder le PDF
@@ -318,7 +307,8 @@ def export_to_pdf(report: Dict) -> str:
         if file_size < 1000:  # Moins de 1KB, probablement corrompu
             raise Exception("Le fichier PDF semble corrompu (taille trop petite)")
         
-        return filename
+        # CORRECTION: Retourner le chemin avec des slashes unix
+        return filename.replace('\\', '/')
         
     except Exception as e:
         raise Exception(f"Erreur de generation PDF: {str(e)}")

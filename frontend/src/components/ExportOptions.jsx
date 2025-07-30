@@ -16,28 +16,71 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
     setDownloadError(null);
 
     try {
-      // Construire l'URL de téléchargement
-      const downloadUrl = pdfUrl.startsWith('http') 
-        ? pdfUrl 
-        : `${window.location.origin}/api/export-pdf/${pdfUrl.split('/').pop()}`;
+      // Essayer d'abord avec l'API, puis avec l'accès direct au fichier
+      let downloadUrl;
+      let fallbackUrl;
+      
+      if (pdfUrl.startsWith('http')) {
+        downloadUrl = pdfUrl;
+      } else {
+        // Extraire le nom du fichier et construire l'URL correctement
+        const fileName = pdfUrl.split('/').pop().split('\\').pop();
+        downloadUrl = `${window.location.origin}/api/export-pdf/${fileName}`;
+        // URL de fallback pour accès direct au fichier
+        fallbackUrl = `${window.location.origin}/${pdfUrl.replace(/\\/g, '/')}`;
+      }
 
       console.log('🔄 Téléchargement PDF depuis:', downloadUrl);
 
-      // Effectuer la requête de téléchargement
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/pdf',
-        },
-      });
+      let response;
+      let finalUrl = downloadUrl;
+
+      try {
+        // Essayer d'abord avec l'endpoint API
+        response = await fetch(downloadUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/pdf',
+          },
+        });
+
+        // Si l'API retourne 404, essayer l'accès direct
+        if (!response.ok && response.status === 404 && fallbackUrl) {
+          console.log('🔄 Essai d\'accès direct au fichier:', fallbackUrl);
+          finalUrl = fallbackUrl;
+          response = await fetch(fallbackUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/pdf',
+            },
+          });
+        }
+      } catch (fetchError) {
+        // Si l'endpoint API échoue complètement, essayer l'accès direct
+        if (fallbackUrl) {
+          console.log('🔄 Fallback vers accès direct:', fallbackUrl);
+          finalUrl = fallbackUrl;
+          response = await fetch(fallbackUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/pdf',
+            },
+          });
+        } else {
+          throw fetchError;
+        }
+      }
 
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Fichier PDF introuvable. Le fichier a peut-être été supprimé ou déplacé.');
+        }
         throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
       }
 
       // Vérifier le type de contenu
       const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/pdf')) {
+      if (contentType && !contentType.includes('application/pdf') && !contentType.includes('octet-stream')) {
         throw new Error('Le fichier téléchargé n\'est pas un PDF valide');
       }
 
@@ -53,12 +96,12 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
       const blobUrl = window.URL.createObjectURL(blob);
       
       // Générer un nom de fichier approprié
-      const filename = pdfUrl.split('/').pop() || `rapport_audit_${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = pdfUrl.split('/').pop().split('\\').pop() || `rapport_audit_${new Date().toISOString().split('T')[0]}.pdf`;
       
       // Créer et déclencher le téléchargement
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = filename;
+      link.download = fileName;
       link.style.display = 'none';
       
       document.body.appendChild(link);
@@ -70,7 +113,7 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
 
       // Afficher le message de succès
       setShowReadyMessage(true);
-      console.log('✅ PDF téléchargé avec succès:', filename);
+      console.log('✅ PDF téléchargé avec succès:', fileName);
 
       // Masquer le message après 3 secondes
       setTimeout(() => {
@@ -89,6 +132,8 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
       setIsDownloading(false);
     }
   };
+
+
 
   return (
     <div className="rounded-lg p-8 max-w-2xl mx-auto">
@@ -129,6 +174,8 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
         </button>
       </div>
 
+
+
       {/* Message de succès */}
       {showReadyMessage && (
         <div className="mt-6 flex justify-center items-center text-green-600 text-lg font-semibold bg-green-50 p-4 rounded-lg border border-green-200">
@@ -136,6 +183,7 @@ export default function ExportOptions({ pdfUrl, onNewAudit }) {
           <span>Le rapport PDF a été téléchargé avec succès !</span>
         </div>
       )}
+      
       {/* Message d'erreur */}
       {downloadError && (
         <div className="mt-6 flex justify-center items-center text-red-600 text-sm bg-red-50 p-4 rounded-lg border border-red-200">

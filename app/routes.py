@@ -424,19 +424,18 @@ async def get_audit_recommendations(audit_id: int, db: Session = Depends(get_db)
 @router.get("/export-pdf/{filename}")
 async def download_pdf(filename: str):
     try:
-        # Sécuriser le nom de fichier
+        
         if not filename.endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Format de fichier invalide")
         
-        # Nettoyer le nom de fichier pour éviter les attaques de chemin
+      
         safe_filename = os.path.basename(filename)
         file_path = Path("reports") / safe_filename
         
         if not file_path.exists():
             print(f"❌ Fichier PDF non trouvé: {file_path}")
             raise HTTPException(status_code=404, detail="Fichier PDF non trouvé")
-        
-        # Vérifier que c'est bien un fichier PDF valide
+            
         file_size = file_path.stat().st_size
         if file_size < 1000:  # Moins de 1KB
             print(f"❌ Fichier PDF corrompu (taille: {file_size} bytes): {file_path}")

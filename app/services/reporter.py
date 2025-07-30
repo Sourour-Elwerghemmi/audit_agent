@@ -5,6 +5,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from typing import Dict
 from fpdf import FPDF
+from datetime import datetime
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -78,105 +79,320 @@ def generate_action_plan(analysis: Dict) -> Dict:
         return {"short_term": [], "mid_term": [], "long_term": []}
 
 class AuditPDF(FPDF):
-    def header(self):
-        self.set_fill_color(255, 140, 0)  # orange vif
-        self.rect(0, 0, self.w, 20, "F")
+    def __init__(self):
+        super().__init__()
+        self.set_auto_page_break(auto=True, margin=20)
+        # Couleurs de la palette
+        self.primary_orange = (255, 140, 0)      # #FF8C00
+        self.light_orange = (255, 200, 100)      # #FFC864
+        self.dark_orange = (205, 102, 0)         # #CD6600
+        self.very_light_orange = (255, 245, 230) # #FFF5E6
+        self.gray = (128, 128, 128)              # #808080
+        self.dark_gray = (64, 64, 64)            # #404040
+        self.light_gray = (240, 240, 240)        # #F0F0F0
 
-        self.set_font("Arial", "B", 18)
-        self.set_text_color(255, 255, 255)  # blanc
-        self.cell(0, 20, "Rapport d'Audit de Visibilité Locale", border=0, ln=True, align="C")
-        self.ln(5)
+    def header(self):
+        # En-tête avec dégradé visuel
+        self.set_fill_color(*self.primary_orange)
+        self.rect(0, 0, self.w, 25, "F")
+        
+        # Ligne décorative
+        self.set_fill_color(*self.light_orange)
+        self.rect(0, 25, self.w, 3, "F")
+
+        self.set_font("Arial", "B", 20)
+        self.set_text_color(255, 255, 255)
+        self.set_y(8)
+        self.cell(0, 12, "AUDIT DE VISIBILITÉ LOCALE", border=0, ln=True, align="C")
+        
+        # Sous-titre
+        self.set_font("Arial", "", 12)
+        self.set_text_color(255, 255, 255)
+        self.cell(0, 8, "Rapport d'analyse et recommandations", border=0, ln=True, align="C")
+        self.ln(10)
 
     def footer(self):
-        self.set_y(-15)
-        self.set_font("Arial", "I", 9)
-        self.set_text_color(128, 128, 128)  # gris clair
-        self.cell(0, 10, f"Page {self.page_no()}", align="C")
-
-    def section_title(self, title, color=(255, 140, 0)):
-        self.set_font("Arial", "B", 14)
-        self.set_text_color(*color)
-        self.cell(0, 8, title, ln=True)
-        self.set_draw_color(*color)
-        self.set_line_width(0.6)
+        self.set_y(-20)
+        
+        # Ligne décorative
+        self.set_draw_color(*self.primary_orange)
+        self.set_line_width(0.5)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(4)
-
-    def write_paragraph(self, text, indent=0):
-        self.set_font("Arial", "", 12)
-        self.set_text_color(0, 0, 0)
-        left_margin = self.l_margin + indent * 4
-        self.set_x(left_margin)
-        self.multi_cell(self.w - left_margin - self.r_margin, 7, text)
         self.ln(3)
+        
+        # Footer en deux parties
+        self.set_font("Arial", "I", 9)
+        self.set_text_color(*self.gray)
+        self.cell(0, 6, f"Page {self.page_no()}", align="C", ln=True)
+        
+        self.set_font("Arial", "B", 9)
+        self.set_text_color(*self.dark_orange)
+        self.cell(0, 6, "Rapport généré par AgentLocalAI - contact@agentlocalai.com", align="C")
 
-    def write_list(self, items):
-        bullet_indent = 8
-        text_indent = 12
+    def company_info_box(self, data: Dict):
+        """Boîte d'informations de l'entreprise avec style moderne"""
+        nom = data.get("nom", "N/A")
+        adresse = data.get("adresse", "N/A")
+        site_web = data.get("site_web", "N/A")
+        note = data.get("note", "N/A")
+        nb_avis = data.get("nb_avis", 0)
+        
+        # Fond de la boîte
+        self.set_fill_color(*self.very_light_orange)
+        box_height = 45
+        self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, box_height, "F")
+        
+        # Border
+        self.set_draw_color(*self.light_orange)
+        self.set_line_width(1)
+        self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, box_height)
+        
+        y_start = self.get_y() + 5
+        
+        # Titre de l'entreprise
+        self.set_y(y_start)
+        self.set_font("Arial", "B", 14)
+        self.set_text_color(*self.dark_orange)
+        self.set_x(self.l_margin + 5)
+        self.cell(0, 8, nom[:80] + ("..." if len(nom) > 80 else ""), ln=True)
+        
+        # Informations détaillées
+        info_items = [
+            ("Adresse:", adresse[:60] + ("..." if len(adresse) > 60 else "")),
+            ("Site web:", site_web),
+            ("Évaluation:", f"{note} ({nb_avis} avis)" if nb_avis else str(note))
+        ]
+        
+        self.set_font("Arial", "", 10)
+        for label, value in info_items:
+            self.set_x(self.l_margin + 5)
+            self.set_text_color(*self.dark_gray)
+            self.cell(25, 6, label, ln=False)
+            self.set_text_color(0, 0, 0)
+            self.cell(0, 6, value, ln=True)
+        
+        self.set_y(self.get_y() + box_height - 35 + 8)
 
-        for item in items:
+    def score_circle(self, score):
+        """Cercle de score avec style moderne"""
+        if score is None:
+            return
+            
+        # Position du cercle
+        center_x = self.w - 40
+        center_y = self.get_y() + 20
+        radius = 15
+        
+        # Cercle de fond
+        self.set_fill_color(*self.light_gray)
+        self.set_draw_color(*self.gray)
+        self.set_line_width(2)
+        
+        # Simulation d'un cercle avec un rectangle arrondi
+        self.set_fill_color(*self.very_light_orange)
+        self.rect(center_x - radius, center_y - radius, radius * 2, radius * 2, "F")
+        
+        # Bordure du score
+        color = self.primary_orange if score >= 70 else (255, 165, 0) if score >= 50 else (255, 69, 0)
+        self.set_draw_color(*color)
+        self.set_line_width(3)
+        self.rect(center_x - radius, center_y - radius, radius * 2, radius * 2)
+        
+        # Score au centre
+        self.set_font("Arial", "B", 16)
+        self.set_text_color(*color)
+        self.set_xy(center_x - 10, center_y - 5)
+        self.cell(20, 10, f"{score}", align="C")
+        
+        # Label
+        self.set_font("Arial", "", 8)
+        self.set_text_color(*self.dark_gray)
+        self.set_xy(center_x - 10, center_y + 8)
+        self.cell(20, 4, "/100", align="C")
+
+    def section_title(self, title, icon=""):
+        """Titre de section avec style amélioré"""
+        self.ln(5)
+        
+        # Fond coloré pour le titre
+        self.set_fill_color(*self.light_orange)
+        title_height = 12
+        self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, title_height, "F")
+        
+        self.set_font("Arial", "B", 14)
+        self.set_text_color(*self.dark_orange)
+        self.set_y(self.get_y() + 2)
+        self.cell(0, 8, f"{icon} {title}", ln=True, align="L")
+        
+        # Ligne décorative
+        self.set_draw_color(*self.primary_orange)
+        self.set_line_width(2)
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+        self.ln(8)
+
+    def diagnostic_summary(self, data: Dict):
+        """Résumé du diagnostic avec indicateurs visuels"""
+        self.section_title("DIAGNOSTIC GÉNÉRAL", "📊")
+        
+        score = data.get("score")
+        if score is not None:
+            # Jauge de score
+            self.set_font("Arial", "B", 16)
+            self.set_text_color(*self.primary_orange)
+            self.cell(0, 10, f"Score Global: {score}/100", ln=True, align="C")
+            
+            # Barre de progression
+            bar_width = 120
+            bar_height = 8
+            x_start = (self.w - bar_width) / 2
+            
+            # Fond de la barre
+            self.set_fill_color(*self.light_gray)
+            self.rect(x_start, self.get_y(), bar_width, bar_height, "F")
+            
+            # Barre de progression
+            progress_width = (score / 100) * bar_width
+            color = self.primary_orange if score >= 70 else (255, 165, 0) if score >= 50 else (255, 69, 0)
+            self.set_fill_color(*color)
+            self.rect(x_start, self.get_y(), progress_width, bar_height, "F")
+            
+            self.ln(15)
+
+    def write_list_modern(self, items, list_type="default"):
+        """Liste avec style moderne et puces personnalisées"""
+        if not items:
+            self.set_font("Arial", "I", 11)
+            self.set_text_color(*self.gray)
+            self.cell(0, 7, "Aucun élément à afficher.", ln=True)
+            self.ln(3)
+            return
+
+        for i, item in enumerate(items, 1):
             titre = item.get("titre", "")
             desc = item.get("description", "")
 
-            # Puce + titre en gras orange foncé
-            self.set_font("Arial", "B", 12)
-            self.set_text_color(205, 102, 0)  # orange foncé #CD6600
-            self.set_x(self.l_margin + bullet_indent)
-            self.cell(5, 7, "•", ln=False)
-            self.cell(0, 7, f" {titre}", ln=True)
+            # Fond alternant pour chaque item
+            if i % 2 == 0:
+                item_height = 15 + (len(desc) // 80) * 6
+                self.set_fill_color(250, 250, 250)
+                self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, item_height, "F")
 
-            # Description en normal noir, indentée
+            # Numérotation et titre
+            self.set_font("Arial", "B", 11)
+            
+            # Couleur selon le type de liste
+            if list_type == "forces":
+                color = (0, 150, 0)  # Vert
+                bullet = "✓"
+            elif list_type == "faiblesses":
+                color = (200, 50, 50)  # Rouge
+                bullet = "✗"
+            else:
+                color = self.dark_orange
+                bullet = f"{i}."
+            
+            self.set_text_color(*color)
+            self.set_x(self.l_margin + 5)
+            self.cell(8, 7, bullet, ln=False)
+            
+            # Titre en gras
+            self.set_text_color(*self.dark_gray)
+            self.cell(0, 7, titre, ln=True)
+
+            # Description avec retrait
             if desc:
-                self.set_font("Arial", "", 12)
+                self.set_font("Arial", "", 10)
                 self.set_text_color(0, 0, 0)
-                self.set_x(self.l_margin + bullet_indent + text_indent)
-                self.multi_cell(self.w - self.l_margin - self.r_margin - bullet_indent - text_indent, 6, desc)
-            self.ln(2)
+                self.set_x(self.l_margin + 15)
+                
+                # Découpage intelligent du texte
+                words = desc.split()
+                lines = []
+                current_line = ""
+                max_chars = 85
+                
+                for word in words:
+                    if len(current_line + " " + word) <= max_chars:
+                        current_line += (" " if current_line else "") + word
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+                
+                if current_line:
+                    lines.append(current_line)
+                
+                for line in lines:
+                    self.set_x(self.l_margin + 15)
+                    self.cell(0, 6, line, ln=True)
+            
+            self.ln(4)
+
+    def action_plan_section(self, data: Dict):
+        """Section plan d'action avec timeline visuelle"""
+        self.add_page()
+        self.section_title("PLAN D'ACTION STRATÉGIQUE", "🎯")
+        
+        periods = [
+            ("short_term", "Actions à Court Terme", "🚀", (255, 100, 100)),
+            ("mid_term", "Actions à Moyen Terme", "📈", (255, 165, 0)),
+            ("long_term", "Actions à Long Terme", "🎯", (50, 150, 50))
+        ]
+        
+        for period_key, period_label, icon, color in periods:
+            actions = data.get(period_key, [])
+            
+            # Titre de période avec couleur distinctive
+            self.ln(8)
+            self.set_fill_color(*color)
+            self.rect(self.l_margin, self.get_y(), self.w - self.l_margin - self.r_margin, 10, "F")
+            
+            self.set_font("Arial", "B", 13)
+            self.set_text_color(255, 255, 255)
+            self.set_y(self.get_y() + 1)
+            self.cell(0, 8, f"{icon} {period_label}", ln=True, align="C")
+            self.ln(6)
+            
+            self.write_list_modern(actions)
 
 def generate_pdf_report(data: Dict, filepath: str):
+    """Génération du rapport PDF avec mise en page améliorée"""
     pdf = AuditPDF()
     pdf.add_page()
-
-    score = data.get("score")
-    if score is not None:
-        pdf.set_font("Arial", "B", 20)
-        pdf.set_text_color(255, 140, 0)  # orange vif
-        pdf.cell(0, 15, f"Score Audit : {score}/100", ln=True, align="C")
-        pdf.ln(8)
-
-    forces = data.get("forces") or []
-    pdf.section_title("Forces", color=(255, 165, 79))  # orange clair #FFA54F
-    if forces:
-        pdf.write_list(forces)
-    else:
-        pdf.write_paragraph("Aucune force détectée.")
-
-    pdf.ln(8)
-
-    faiblesses = data.get("faiblesses") or []
-    pdf.section_title("Faiblesses", color=(255, 140, 0))  # orange vif #FF8C00
-    if faiblesses:
-        pdf.write_list(faiblesses)
-    else:
-        pdf.write_paragraph("Aucune faiblesse détectée.")
-
-    pdf.ln(8)
-
-    pdf.section_title("Recommandations stratégiques", color=(255, 165, 0))  # orange doré #FFA500
-    for periode, label in [("short_term", "Court terme"), ("mid_term", "Moyen terme"), ("long_term", "Long terme")]:
-        recos = data.get(periode) or []
-        pdf.set_font("Arial", "B", 13)
-        pdf.set_text_color(255, 140, 0)  # orange vif #FF8C00
-        pdf.cell(0, 10, label, ln=True)
-        pdf.ln(2)
-
-        if recos:
-            pdf.write_list(recos)
-        else:
-            pdf.set_font("Arial", "I", 12)
-            pdf.set_text_color(128, 128, 128)
-            pdf.cell(0, 7, "Aucune recommandation.", ln=True)
-
-        pdf.ln(6)
-
-    pdf.output(filepath)             
+    
+    # Date de génération
+    now = datetime.now()
+    pdf.set_font("Arial", "", 10)
+    pdf.set_text_color(*pdf.gray)
+    pdf.cell(0, 6, f"Généré le {now.strftime('%d/%m/%Y à %H:%M')}", ln=True, align="R")
+    pdf.ln(5)
+    
+    # Informations de l'entreprise
+    pdf.section_title("INFORMATIONS DE L'ENTREPRISE", "🏢")
+    pdf.company_info_box(data)
+    pdf.ln(10)
+    
+    # Diagnostic avec score
+    pdf.diagnostic_summary(data)
+    
+    # Points forts
+    forces = data.get("forces", [])
+    pdf.section_title("POINTS FORTS", "✅")
+    pdf.write_list_modern(forces, "forces")
+    pdf.ln(5)
+    
+    # Points faibles
+    faiblesses = data.get("faiblesses", [])
+    pdf.section_title("POINTS D'AMÉLIORATION", "⚠️")
+    pdf.write_list_modern(faiblesses, "faiblesses")
+    
+    # Plan d'action
+    pdf.action_plan_section(data)
+    
+    try:
+        pdf.output(filepath)
+        logger.info(f"Rapport PDF généré avec succès: {filepath}")
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération du PDF: {e}")
+        raise
+    

@@ -17,6 +17,8 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
 
     setIsLoading(true);
     try {
+      console.log('Tentative de connexion avec:', { email, password: '***' });
+      
       const response = await fetch('/api/token', {
         method: 'POST',
         headers: {
@@ -27,6 +29,8 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
           password: password,
         }),
       });
+
+      console.log('Status de réponse:', response.status);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -39,7 +43,24 @@ export default function Login({ onLogin, onSwitchToRegister, onBackToLanding }) 
       }
 
       const data = await response.json();
+      console.log('Données reçues:', data);
+      
       const accessToken = data.access_token;
+
+      if (!accessToken) {
+        setErrorMsg("Token non reçu du serveur");
+        setIsLoading(false);
+        return;
+      }
+
+      // ✅ STOCKER LE TOKEN DANS LOCALSTORAGE
+      localStorage.setItem('accessToken', accessToken);
+      console.log('Token stocké dans localStorage:', accessToken.substring(0, 20) + '...');
+
+      // Optionnel: stocker les infos utilisateur si disponibles
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
 
       // On appelle onLogin avec email, nom extrait de l'email, et le token JWT
       onLogin({ email, name: email.split('@')[0], token: accessToken });
