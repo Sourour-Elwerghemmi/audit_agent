@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from typing import Dict
 from fpdf import FPDF
 from datetime import datetime
+import unicodedata
+import re
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -79,13 +81,64 @@ def generate_action_plan(analysis: Dict) -> Dict:
         return {"short_term": [], "mid_term": [], "long_term": []}
 
 def normalize_text(text: str) -> str:
+    """Normalise le texte pour le PDF en gérant les caractères Unicode"""
+    if not text:
+        return ""
+    
+    # Convertir en string si ce n'est pas déjà le cas
+    text = str(text)
+    
+    # Remplacements spécifiques pour les caractères problématiques
     replacements = {
+        # Caractères arabes et spéciaux
+        '،': ',',  # Virgule arabe
+        '؟': '?',  # Point d'interrogation arabe
+        '؛': ';',  # Point-virgule arabe
+        '٪': '%',  # Pourcentage arabe
+        
+        # Caractères français
         'œ': 'oe', 'Œ': 'OE', 'æ': 'ae', 'Æ': 'AE', 'ç': 'c', 'Ç': 'C',
-        'à': 'a', 'À': 'A', 'é': 'e', 'É': 'E', 'è': 'e', 'È': 'E',
-        'ê': 'e', 'Ê': 'E', 'ù': 'u', 'Ù': 'U', 'ô': 'o', 'Ô': 'O',
+        'à': 'a', 'À': 'A', 'á': 'a', 'Á': 'A', 'â': 'a', 'Â': 'A',
+        'ã': 'a', 'Ã': 'A', 'ä': 'a', 'Ä': 'A', 'å': 'a', 'Å': 'A',
+        'é': 'e', 'É': 'E', 'è': 'e', 'È': 'E', 'ê': 'e', 'Ê': 'E',
+        'ë': 'e', 'Ë': 'E', 'í': 'i', 'Í': 'I', 'ì': 'i', 'Ì': 'I',
+        'î': 'i', 'Î': 'I', 'ï': 'i', 'Ï': 'I', 'ó': 'o', 'Ó': 'O',
+        'ò': 'o', 'Ò': 'O', 'ô': 'o', 'Ô': 'O', 'õ': 'o', 'Õ': 'O',
+        'ö': 'o', 'Ö': 'O', 'ø': 'o', 'Ø': 'O', 'ú': 'u', 'Ú': 'U',
+        'ù': 'u', 'Ù': 'U', 'û': 'u', 'Û': 'U', 'ü': 'u', 'Ü': 'U',
+        'ý': 'y', 'Ý': 'Y', 'ÿ': 'y', 'Ÿ': 'Y', 'ñ': 'n', 'Ñ': 'N',
+        
+        # Guillemets et apostrophes
+        '"': '"', '"': '"', ''': "'", ''': "'", '«': '"', '»': '"',
+        
+        # Tirets
+        '–': '-', '—': '-', '−': '-',
+        
+        # Autres caractères spéciaux
+        '…': '...', '€': 'EUR', '°': 'deg', '²': '2', '³': '3',
     }
-    for bad_char, replacement in replacements.items():
-        text = text.replace(bad_char, replacement)
+    
+    # Appliquer les remplacements
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    
+    # Normaliser les caractères Unicode restants (décomposition puis recomposition)
+    try:
+        # Décomposer les caractères accentués
+        text = unicodedata.normalize('NFD', text)
+        # Supprimer les accents en gardant seulement les caractères ASCII
+        text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')
+        # Recomposer
+        text = unicodedata.normalize('NFC', text)
+    except Exception as e:
+        logger.warning(f"Erreur lors de la normalisation Unicode: {e}")
+    
+    # Supprimer ou remplacer les caractères non-ASCII restants
+    text = re.sub(r'[^\x00-\x7F]+', '', text)
+    
+    # Nettoyer les espaces multiples
+    text = re.sub(r'\s+', ' ', text).strip()
+    
     return text
 
 class MinimalAuditPDF(FPDF):
@@ -116,16 +169,45 @@ class MinimalAuditPDF(FPDF):
         self.set_text_color(*self.secondary)
         self.cell(0, 10, f"Page {self.page_no()}", align="C")
 
+    def safe_cell(self, w, h, txt='', border=0, ln=0, align='', fill=False, link=''):
+        """Version sécurisée de cell() qui normalise le texte"""
+        try:
+            normalized_txt = normalize_text(txt)
+            self.cell(w, h, normalized_txt, border, ln, align, fill, link)
+        except Exception as e:
+            logger.warning(f"Erreur lors de l'écriture du texte: {e}, texte: {repr(txt)}")
+            # Fallback: essayer avec un texte simplifié
+            try:
+                fallback_txt = ''.join(c for c in str(txt) if ord(c) < 128)
+                self.cell(w, h, fallback_txt, border, ln, align, fill, link)
+            except:
+                self.cell(w, h, "[Texte non affichable]", border, ln, align, fill, link)
+
+    def safe_multi_cell(self, w, h, txt, border=0, align='L', fill=False):
+        """Version sécurisée de multi_cell() qui normalise le texte"""
+        try:
+            normalized_txt = normalize_text(txt)
+            self.multi_cell(w, h, normalized_txt, border, align, fill)
+        except Exception as e:
+            logger.warning(f"Erreur lors de l'écriture du texte multi-ligne: {e}, texte: {repr(txt)}")
+            # Fallback: essayer avec un texte simplifié
+            try:
+                fallback_txt = ''.join(c for c in str(txt) if ord(c) < 128)
+                self.multi_cell(w, h, fallback_txt, border, align, fill)
+            except:
+                self.multi_cell(w, h, "[Texte non affichable]", border, align, fill)
+
     def add_section_title(self, title: str):
         """Titre de section minimaliste"""
         self.ln(15)
         self.set_font("Arial", "B", 16)
         self.set_text_color(*self.primary)
-        self.cell(0, 10, normalize_text(title), ln=True)
+        normalized_title = normalize_text(title)
+        self.safe_cell(0, 10, normalized_title, ln=True)
         
         self.set_draw_color(*self.accent)
         self.set_line_width(2)
-        title_width = self.get_string_width(title)
+        title_width = self.get_string_width(normalized_title)
         self.line(self.l_margin, self.get_y() + 2, self.l_margin + title_width, self.get_y() + 2)
         self.ln(10)
 
@@ -137,10 +219,9 @@ class MinimalAuditPDF(FPDF):
         note = data.get("note", "N/A")
         nb_avis = data.get("nb_avis", 0)
 
-      
         self.set_font("Arial", "B", 24)
         self.set_text_color(*self.primary)
-        self.cell(0, 15, nom, ln=True, align="C")
+        self.safe_cell(0, 15, nom, ln=True, align="C")
         self.ln(5)
         
         # Informations en tableau simple
@@ -153,11 +234,11 @@ class MinimalAuditPDF(FPDF):
         for label, value in info_data:
             self.set_font("Arial", "B", 11)
             self.set_text_color(*self.secondary)
-            self.cell(40, 8, f"{label}:")
+            self.safe_cell(40, 8, f"{label}:")
             
             self.set_font("Arial", "", 11)
             self.set_text_color(*self.primary)
-            self.cell(0, 8, value, ln=True)
+            self.safe_cell(0, 8, value, ln=True)
         
         self.ln(5)
 
@@ -171,11 +252,11 @@ class MinimalAuditPDF(FPDF):
         
         self.set_font("Arial", "B", 48)
         self.set_text_color(*self.accent)
-        self.cell(0, 20, f"{score}", align="C", ln=True)
+        self.safe_cell(0, 20, f"{score}", align="C", ln=True)
         
         self.set_font("Arial", "", 14)
         self.set_text_color(*self.secondary)
-        self.cell(0, 8, "/ 100", align="C", ln=True)
+        self.safe_cell(0, 8, "/ 100", align="C", ln=True)
         
         self.ln(10)
         bar_width = 120
@@ -199,7 +280,7 @@ class MinimalAuditPDF(FPDF):
         if not items:
             self.set_font("Arial", "I", 11)
             self.set_text_color(*self.secondary)
-            self.cell(0, 8, "Aucun element identifie", ln=True)
+            self.safe_cell(0, 8, "Aucun element identifie", ln=True)
             self.ln(10)
             return
         
@@ -210,19 +291,19 @@ class MinimalAuditPDF(FPDF):
             self.set_font("Arial", "B", 10)
             self.set_text_color(*self.white)
             self.set_fill_color(*self.secondary)
-            self.cell(6, 6, str(i), align="C", fill=True)
+            self.safe_cell(6, 6, str(i), align="C", fill=True)
             
             self.set_x(self.l_margin + 10)
             self.set_font("Arial", "B", 12)
             self.set_text_color(*self.primary)
-            self.cell(0, 6, titre, ln=True)
+            self.safe_cell(0, 6, titre, ln=True)
             
             if desc:
                 self.set_font("Arial", "", 10)
                 self.set_text_color(*self.secondary)
                 self.set_x(self.l_margin + 10)
                 available_width = self.w - self.l_margin - self.r_margin - 10
-                self.multi_cell(available_width, 5, desc)
+                self.safe_multi_cell(available_width, 5, desc)
             
             self.ln(8)
 
@@ -244,11 +325,11 @@ class MinimalAuditPDF(FPDF):
             self.ln(8)
             self.set_font("Arial", "B", 14)
             self.set_text_color(*self.primary)
-            self.cell(120, 8, label)
+            self.safe_cell(120, 8, label)
             
             self.set_font("Arial", "I", 10)
             self.set_text_color(*self.secondary)
-            self.cell(0, 8, timeline, align="R", ln=True)
+            self.safe_cell(0, 8, timeline, align="R", ln=True)
             
             self.set_draw_color(*self.light_gray)
             self.set_line_width(0.5)
@@ -261,11 +342,11 @@ class MinimalAuditPDF(FPDF):
                 
                 self.set_font("Arial", "B", 12)
                 self.set_text_color(*self.accent)
-                self.cell(8, 6, f"{i}.")
+                self.safe_cell(8, 6, f"{i}.")
                 
                 self.set_font("Arial", "B", 11)
                 self.set_text_color(*self.primary)
-                self.cell(0, 6, titre, ln=True)
+                self.safe_cell(0, 6, titre, ln=True)
                 
                 if desc:
                     self.set_font("Arial", "", 10)
@@ -273,7 +354,7 @@ class MinimalAuditPDF(FPDF):
                     self.set_x(self.l_margin + 8)
                    
                     available_width = self.w - self.l_margin - self.r_margin - 8
-                    self.multi_cell(available_width, 5, desc)
+                    self.safe_multi_cell(available_width, 5, desc)
                 
                 self.ln(6)
             
@@ -284,27 +365,26 @@ class MinimalAuditPDF(FPDF):
         now = datetime.now()
         self.set_font("Arial", "", 9)
         self.set_text_color(*self.secondary)
-        self.cell(0, 6, normalize_text(f"Rapport genere le {now.strftime('%d/%m/%Y a %H:%M')}"), 
-                 ln=True, align="R")
+        self.safe_cell(0, 6, normalize_text(f"Rapport genere le {now.strftime('%d/%m/%Y a %H:%M')}"), 
+                      ln=True, align="R")
         self.ln(10)
 
 def generate_pdf_report(data: Dict, filepath: str):
     """Génère le rapport PDF avec design minimaliste"""
-    pdf = MinimalAuditPDF()
-    pdf.add_page()
-    
-    # Sections du rapport
-    pdf.add_generation_info()
-    pdf.company_info_section(data)
-    pdf.score_section(data)
-    pdf.simple_list_section(data.get("forces", []), "POINTS FORTS")
-    pdf.simple_list_section(data.get("faiblesses", []), "POINTS A AMELIORER")
-    pdf.action_plan_section(data)
-    
     try:
+        pdf = MinimalAuditPDF()
+        pdf.add_page()
+        # Sections du rapport
+        pdf.add_generation_info()
+        pdf.company_info_section(data)
+        pdf.score_section(data)
+        pdf.simple_list_section(data.get("forces", []), "POINTS FORTS")
+        pdf.simple_list_section(data.get("faiblesses", []), "POINTS A AMELIORER")
+        pdf.action_plan_section(data)
+        
         pdf.output(filepath)
         logger.info(f"Rapport PDF minimaliste généré avec succès: {filepath}")
+        
     except Exception as e:
-        logger.error(f"Erreur lors de la génération du PDF: {e}")
-        raise
-    
+        logger.error(f"Erreur lors de la génération du PDF: {e}", exc_info=True)
+        raise RuntimeError(f"Impossible de générer le PDF: {str(e)}")  
